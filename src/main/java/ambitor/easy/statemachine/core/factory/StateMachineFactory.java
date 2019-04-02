@@ -7,7 +7,6 @@ import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
 import ambitor.easy.statemachine.core.configurer.adapter.AbstractStateMachineConfigurerAdapter;
 import ambitor.easy.statemachine.core.configurer.adapter.StateMachineConfigurerAdapter;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
-import ambitor.easy.statemachine.core.guard.DefaultGuard;
 import ambitor.easy.statemachine.core.guard.Guard;
 import ambitor.easy.statemachine.core.interceptor.StateMachineInterceptorList;
 import ambitor.easy.statemachine.core.state.State;
@@ -78,12 +77,11 @@ public class StateMachineFactory {
             while (configurer != null) {
                 if (configurer instanceof DefaultStandardTransitionConfigurer) {
                     //StandardTransitionConfigurer
-                    DefaultGuard<S, E> defaultGuard = new DefaultGuard<>();
                     DefaultStandardTransitionConfigurer<S, E> standard = (DefaultStandardTransitionConfigurer<S, E>) configurer;
                     State<S, E> target = stateMaps.get(standard.getTarget());
                     State<S, E> source = stateMaps.get(standard.getSource());
                     Collection<Transition<S, E>> collection = transitions.computeIfAbsent(source.getId(), k -> new ArrayList<>());
-                    Transition<S, E> t = getTransition(stateMachineName, source, target, standard.getEvent(), defaultGuard, standard.getActions());
+                    Transition<S, E> t = getTransition(stateMachineName, source, target, standard.getEvent(), (s)-> true, standard.getActions());
                     collection.add(t);
                     configurer = standard.getNext();
                 } else if (configurer instanceof DefaultChoiceTransitionConfigurer) {

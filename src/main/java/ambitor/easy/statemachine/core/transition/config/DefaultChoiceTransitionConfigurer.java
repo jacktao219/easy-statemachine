@@ -3,7 +3,6 @@ package ambitor.easy.statemachine.core.transition.config;
 
 import ambitor.easy.statemachine.core.action.Action;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
-import ambitor.easy.statemachine.core.guard.DefaultGuard;
 import ambitor.easy.statemachine.core.guard.Guard;
 
 import java.util.ArrayList;
@@ -51,7 +50,7 @@ public class DefaultChoiceTransitionConfigurer<S, E> extends BaseTransitionConfi
      */
     @Override
     public ChoiceTransitionConfigurer<S, E> last(S target) {
-        last = new ChoiceData<>(getSource(), target, new DefaultGuard<>());
+        last = new ChoiceData<>(getSource(), target,(s)-> true);
         return this;
     }
 

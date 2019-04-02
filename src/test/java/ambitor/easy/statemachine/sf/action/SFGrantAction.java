@@ -8,6 +8,9 @@ import ambitor.easy.statemachine.sf.enumerate.SFGrantState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.GRANT_STATUS;
+import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.GRANT_SUCCESS;
+
 @Component
 @Slf4j
 public class SFGrantAction implements Action<SFGrantState, SFGrantEvent> {
@@ -19,6 +22,7 @@ public class SFGrantAction implements Action<SFGrantState, SFGrantEvent> {
     @Override
     public void execute(StateContext<SFGrantState, SFGrantEvent> context) {
         System.out.println("放款");
+        addHeader(context, GRANT_STATUS, GRANT_SUCCESS);
     }
 
 }

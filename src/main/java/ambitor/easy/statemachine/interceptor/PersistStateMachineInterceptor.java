@@ -41,7 +41,7 @@ public class PersistStateMachineInterceptor<S extends Enum<S>, E extends Enum<E>
         update.setMachineState(state.getId().name());
         stateMachineTaskService.updateByPrimaryKeySelective(update);
         String tid = task.getId() + "-" + System.currentTimeMillis();
-        log.error("状态发生改变 tid->{}", tid);
+        log.info("状态发生改变 tid->{}", tid);
         message.getHeaders().addHeader(TRANSITION_UNIQUE_ID, tid);
         String response = JSON.toJSONString(message.getHeaders());
         response = response.length() > MID_TEXT_LENGTH ? response.substring(0, MID_TEXT_LENGTH) : response;

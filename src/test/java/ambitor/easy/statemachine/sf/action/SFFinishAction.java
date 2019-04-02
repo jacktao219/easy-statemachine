@@ -15,6 +15,6 @@ public class SFFinishAction implements Action<SFGrantState, SFGrantEvent> {
      */
     @Override
     public void execute(StateContext<SFGrantState, SFGrantEvent> context) {
-       log.info("放款成功后action");
+       log.info("放款成功后生成还款计划");
     }
 }

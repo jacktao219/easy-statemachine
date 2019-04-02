@@ -95,7 +95,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
      */
     public <S extends Enum<S>, E extends Enum<E>> void processTask(StateMachineTask task) {
         String transactionId = task.getTransactionId();
-        log.info("{} 状态机开始执行:{}", transactionId, JSON.toJSONString(task));
+        log.info(" 状态机开始执行:{}", JSON.toJSONString(task));
         try {
             boolean locked = lock(transactionId);
             if (!locked) {

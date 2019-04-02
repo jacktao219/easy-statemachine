@@ -15,7 +15,7 @@ import ambitor.easy.statemachine.sf.action.SFFinishAction;
 import ambitor.easy.statemachine.sf.action.SFGrantAction;
 import ambitor.easy.statemachine.sf.enumerate.SFGrantEvent;
 import ambitor.easy.statemachine.sf.enumerate.SFGrantState;
-import ambitor.easy.statemachine.sf.guard.GrantGuard;
+import ambitor.easy.statemachine.core.guard.DefaultGuard;
 
 import java.util.EnumSet;
 
@@ -67,9 +67,9 @@ public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGra
                 //原状态为等待建档授信
                 .source(SFGrantState.WAIT_DOCUMENT_CREDIT)
                 //first相当于if，如果建档授信状态返回DOCUMENT_CREDIT_SUCCESS则转换成WAIT_GRANT等待放款
-                .first(SFGrantState.WAIT_GRANT, GrantGuard.condition(DOCUMENT_CREDIT_STATUS, DOCUMENT_CREDIT_SUCCESS))
+                .first(SFGrantState.WAIT_GRANT, DefaultGuard.condition(DOCUMENT_CREDIT_STATUS, DOCUMENT_CREDIT_SUCCESS))
                 //then相当于elseif，如果建档授信状态返回WAIT_DOCUMENT_CREDIT_CALLBACK则转换成等待建档授信回调
-                .then(SFGrantState.WAIT_DOCUMENT_CREDIT_CALLBACK, GrantGuard.condition(DOCUMENT_CREDIT_STATUS, WAIT_DOCUMENT_CREDIT_CALLBACK))
+                .then(SFGrantState.WAIT_DOCUMENT_CREDIT_CALLBACK, DefaultGuard.condition(DOCUMENT_CREDIT_STATUS, WAIT_DOCUMENT_CREDIT_CALLBACK))
                 //last相当于else，如果都不是则返回建档授信失败
                 .last(SFGrantState.DOCUMENT_CREDIT_FAILED)
                 //触发事件
@@ -80,14 +80,14 @@ public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGra
                 /**  3、等待建档授信回调步骤  **/
                 .choiceTransition()
                 .source(SFGrantState.WAIT_DOCUMENT_CREDIT_CALLBACK)
-                .first(SFGrantState.WAIT_GRANT, GrantGuard.condition(DOCUMENT_CREDIT_STATUS, DOCUMENT_CREDIT_SUCCESS))
+                .first(SFGrantState.WAIT_GRANT, DefaultGuard.condition(DOCUMENT_CREDIT_STATUS, DOCUMENT_CREDIT_SUCCESS))
                 .last(SFGrantState.DOCUMENT_CREDIT_FAILED)
                 .event(SFGrantEvent.DOCUMENT_CREDIT_CALLBACK)
                 .and()
                 /**  4、等待放款流程 **/
                 .choiceTransition()
                 .source(SFGrantState.WAIT_GRANT)
-                .first(SFGrantState.GRANT_TASK_SAVE, GrantGuard.condition(GRANT_STATUS, GRANT_SUCCESS))
+                .first(SFGrantState.GRANT_TASK_SAVE, DefaultGuard.condition(GRANT_STATUS, GRANT_SUCCESS))
                 .last(SFGrantState.WAIT_GRANT_CHECK)
                 .event(SFGrantEvent.GRANTED)
                 .action(sfGrantAction)
@@ -95,7 +95,7 @@ public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGra
                 /** 5、放款检查流程，如果上一步操作超时 **/
                 .choiceTransition()
                 .source(SFGrantState.WAIT_GRANT_CHECK)
-                .first(SFGrantState.GRANT_TASK_SAVE, GrantGuard.condition(GRANT_STATUS, GRANT_SUCCESS))
+                .first(SFGrantState.GRANT_TASK_SAVE, DefaultGuard.condition(GRANT_STATUS, GRANT_SUCCESS))
                 .last(SFGrantState.GRANT_FAILED)
                 .event(SFGrantEvent.GRANT_CHECKED)
                 .and()
