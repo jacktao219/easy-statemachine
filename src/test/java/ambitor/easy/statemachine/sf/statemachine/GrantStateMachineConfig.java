@@ -23,7 +23,7 @@ import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.*;
 
 @Slf4j
 @EnableWithStateMachine
-public class SFGrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGrantState, SFGrantEvent> {
+public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGrantState, SFGrantEvent> {
 
     @Override
     public void configure(StateConfigurer<SFGrantState, SFGrantEvent> states) {

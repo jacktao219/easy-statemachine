@@ -41,6 +41,15 @@ public class StateMachineFactory {
 
     private static Map<String, Transition> transitions = new HashMap<>();
 
+    /**
+     * 创建状态机
+     * @param <S>
+     * @param <E>
+     * @return
+     */
+    public static <S extends Enum<S>, E extends Enum<S>> StateMachine<S, E> buildWithEnum(StateMachineConfigurer<S, E> stateMachineConfigurer) {
+        return build(stateMachineConfigurer);
+    }
 
     /**
      * 创建状态机
@@ -48,7 +57,7 @@ public class StateMachineFactory {
      * @param <E>
      * @return
      */
-    public static <S extends Enum<S>, E extends Enum<E>> StateMachine<S, E> build(StateMachineConfigurer<S, E> stateMachineConfigurer) {
+    public static <S, E> StateMachine<S, E> build(StateMachineConfigurer<S, E> stateMachineConfigurer) {
         try {
             if (!(stateMachineConfigurer instanceof AbstractStateMachineConfigurerAdapter)) {
                 throw new StateMachineException("stateMachineConfigurer must be AbstractStateMachineConfigurerAdapter instance ");
@@ -111,7 +120,7 @@ public class StateMachineFactory {
     /**
      * 校验状态和转换器
      */
-    private static <S extends Enum<S>, E extends Enum<E>> void checkStatus2Transition(Map<S, State<S, E>> stateMaps, Map<S, Collection<Transition<S, E>>> transitions) {
+    private static <S, E> void checkStatus2Transition(Map<S, State<S, E>> stateMaps, Map<S, Collection<Transition<S, E>>> transitions) {
         if (stateMaps == null || stateMaps.isEmpty()) {
             throw new StateMachineException("Please defined State By StateMachine StateConfigurer");
         }
@@ -128,13 +137,14 @@ public class StateMachineFactory {
         }
     }
 
+
     /**
      * 确保Transition不能重复添加
      */
     private static <S, E> Transition<S, E> getTransition(String stateMachineName, State<S, E> source, State<S, E> target, E event, Guard<S, E> guard, Collection<Action<S, E>> actions) {
-        if(source == null) throw new StateMachineException("Transition source state can not be null");
-        if(target == null) throw new StateMachineException("Transition target state can not be null");
-        if(event == null) throw new StateMachineException( "Transition event can not be null");
+        if (source == null) throw new StateMachineException("Transition source state can not be null");
+        if (target == null) throw new StateMachineException("Transition target state can not be null");
+        if (event == null) throw new StateMachineException("Transition event can not be null");
         String key = stateMachineName + "_" + source.getId() + "_" + target.getId() + "_" + event;
         Transition<S, E> transition = transitions.get(key);
         if (transition == null) {

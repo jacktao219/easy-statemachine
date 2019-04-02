@@ -5,7 +5,7 @@ import ambitor.easy.statemachine.model.StateMachineTask;
 import java.util.List;
 
 /**
- * 状态机service
+ * 任务service
  * Created by Ambitor on 2019/3/20
  */
 public interface StateMachineTaskService {

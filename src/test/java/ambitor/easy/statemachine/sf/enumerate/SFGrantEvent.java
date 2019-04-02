@@ -1,8 +1,6 @@
 package ambitor.easy.statemachine.sf.enumerate;
 
 public enum SFGrantEvent {
-    //校验
-//    CHECK,
     //开二类户
     CREATE_CARDII,
     //建档授信

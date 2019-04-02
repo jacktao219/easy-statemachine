@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -35,18 +36,14 @@ import static ambitor.easy.statemachine.model.StateMachineConstant.TASK_HEADER;
  */
 @Slf4j
 @Component
-public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E extends Enum<E>> implements ApplicationContextAware, StateMachineTaskService {
-
-    @Autowired
-    private StateMachineTaskService stateMachineTaskService;
-    private static ApplicationContext context = null;
+public abstract class AbstractStateMachineService implements ApplicationContextAware, StateMachineService {
 
     /**
      * 通过状态机名称拿到状态机Configurer
      * @param stateMachineName 状态机名称
      * @return 配置
      */
-    public StateMachineConfigurer<S, E> getByName(String stateMachineName) {
+    public <S, E> StateMachineConfigurer<S, E> getByName(String stateMachineName) {
         if (StringUtils.isEmpty(stateMachineName)) throw new StateMachineException("状态机名称为空");
         Map<String, Object> stateMachineConfigs = context.getBeansWithAnnotation(EnableWithStateMachine.class);
         Collection<Object> values = stateMachineConfigs.values();
@@ -66,23 +63,25 @@ public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E exten
      * 3、将任务放入到MQ中
      * 注意事务处理，忽略超时重试的场景
      */
-    public void executeStateMachineTask() {
-        List<StateMachineTask> list = getExecuteTask();
+    public List<StateMachineTask> execute() {
+        List<StateMachineTask> list = taskService.getExecuteTask();
         for (StateMachineTask task : list) {
             updateAndSendToMq(task);
         }
+        return list;
     }
 
     /**
      * 更新状态后推送到mq
      * @param task 任务
      */
+    @Transactional(rollbackFor = Exception.class)
     public void updateAndSendToMq(StateMachineTask task) {
         Date now = new Date();
         task.setCurrentTrytimes((1 + task.getCurrentTrytimes()));
         task.setScanStatus(TaskStatus.running.name());
         task.setUpdateTime(now);
-        int affect = stateMachineTaskService.updateByPrimaryKeySelective(task);
+        int affect = taskService.updateByPrimaryKeySelective(task);
         if (affect > 0) {
             sendToMq(task);
         } else {
@@ -94,7 +93,7 @@ public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E exten
      * 执行task
      * @param task task
      */
-    public void processTask(StateMachineTask task) {
+    public <S extends Enum<S>, E extends Enum<E>> void processTask(StateMachineTask task) {
         String transactionId = task.getTransactionId();
         log.info("{} 状态机开始执行:{}", transactionId, JSON.toJSONString(task));
         try {
@@ -133,7 +132,7 @@ public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E exten
                     update.setScanStatus(TaskStatus.close.name());
                 }
             }
-            stateMachineTaskService.updateByPrimaryKeySelective(update);
+            taskService.updateByPrimaryKeySelective(update);
         } catch (Exception e) {
             log.error("{}状态机执行发生异常", transactionId, e);
             StateMachineTask update = new StateMachineTask();
@@ -142,7 +141,7 @@ public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E exten
             update.setResponseData(JSON.toJSONString(e));
             update.setScanStatus(task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name());
             update.setNextRunTime(LocalDateTime2Date(LocalDateTime.now().plusMinutes(5)));
-            stateMachineTaskService.updateByPrimaryKeySelective(update);
+            taskService.updateByPrimaryKeySelective(update);
         } finally {
             log.info("{} 释放锁", transactionId);
             unLock(transactionId);
@@ -188,5 +187,9 @@ public abstract class AbstractStateMachineTaskService<S extends Enum<S>, E exten
      * @return true 成功 false 失败
      */
     public abstract boolean unLock(String transactionId);
+
+    @Autowired
+    private StateMachineTaskService taskService;
+    private static ApplicationContext context = null;
 
 }
