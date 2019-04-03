@@ -1,7 +1,7 @@
 package ambitor.easy.statemachine.sf.service;
 
-import ambitor.easy.statemachine.model.StateMachineTask;
-import ambitor.easy.statemachine.service.AbstractStateMachineService;
+import ambitor.easy.statemachine.workflow.model.StateMachineTask;
+import ambitor.easy.statemachine.workflow.service.AbstractStateMachineService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

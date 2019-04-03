@@ -1,6 +1,6 @@
-package ambitor.easy.statemachine.service;
+package ambitor.easy.statemachine.workflow.service;
 
-import ambitor.easy.statemachine.model.StateMachineLog;
+import ambitor.easy.statemachine.workflow.model.StateMachineLog;
 
 /**
  * 状态机日志记录

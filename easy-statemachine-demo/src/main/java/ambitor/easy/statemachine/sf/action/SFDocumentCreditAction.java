@@ -4,6 +4,7 @@ import ambitor.easy.statemachine.core.action.Action;
 import ambitor.easy.statemachine.core.context.StateContext;
 import ambitor.easy.statemachine.sf.enumerate.SFGrantEvent;
 import ambitor.easy.statemachine.sf.enumerate.SFGrantState;
+import ambitor.easy.statemachine.workflow.action.WorkFlowAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +13,7 @@ import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.DOCUMENT_CRED
 
 @Slf4j
 @Component
-public class SFDocumentCreditAction implements Action<SFGrantState, SFGrantEvent> {
+public class SFDocumentCreditAction implements WorkFlowAction<SFGrantState, SFGrantEvent> {
 
     @Override
     public void execute(StateContext<SFGrantState, SFGrantEvent> context) {

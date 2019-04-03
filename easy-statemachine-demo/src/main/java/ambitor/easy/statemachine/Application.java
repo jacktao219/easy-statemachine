@@ -1,7 +1,7 @@
 package ambitor.easy.statemachine;
 
-import ambitor.easy.statemachine.model.StateMachineTask;
-import ambitor.easy.statemachine.service.StateMachineService;
+import ambitor.easy.statemachine.workflow.model.StateMachineTask;
+import ambitor.easy.statemachine.workflow.service.StateMachineService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;

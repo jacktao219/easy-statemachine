@@ -12,6 +12,7 @@
 
     <modules>
         <module>easy-statemachine-core</module>
+		<module>easy-statemachine-wokflow</module>
         <module>easy-statemachine-demo</module>
     </modules>
 

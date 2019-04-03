@@ -1,4 +1,4 @@
-package ambitor.easy.statemachine.model;
+package ambitor.easy.statemachine.workflow.model;
 
 public enum TaskStatus {
     /**

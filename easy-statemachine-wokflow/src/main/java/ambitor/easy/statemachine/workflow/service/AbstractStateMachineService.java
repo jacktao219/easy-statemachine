@@ -1,4 +1,4 @@
-package ambitor.easy.statemachine.service;
+package ambitor.easy.statemachine.workflow.service;
 
 import ambitor.easy.statemachine.core.StateMachine;
 import ambitor.easy.statemachine.core.annotation.EnableWithStateMachine;
@@ -8,8 +8,8 @@ import ambitor.easy.statemachine.core.context.MessageHeaders;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
 import ambitor.easy.statemachine.core.exception.StateMachineRetryException;
 import ambitor.easy.statemachine.core.factory.StateMachineFactory;
-import ambitor.easy.statemachine.model.StateMachineTask;
-import ambitor.easy.statemachine.model.TaskStatus;
+import ambitor.easy.statemachine.workflow.model.StateMachineTask;
+import ambitor.easy.statemachine.workflow.model.TaskStatus;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -29,7 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static ambitor.easy.statemachine.model.StateMachineConstant.TASK_HEADER;
+import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK_HEADER;
 
 /**
  * 状态机service

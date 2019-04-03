@@ -1,4 +1,4 @@
-package ambitor.easy.statemachine.model;
+package ambitor.easy.statemachine.workflow.model;
 
 /**
  * Created by Ambitor on 2019/1/21

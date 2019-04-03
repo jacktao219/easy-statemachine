@@ -1,6 +1,6 @@
-package ambitor.easy.statemachine.service;
+package ambitor.easy.statemachine.workflow.service;
 
-import ambitor.easy.statemachine.model.StateMachineTask;
+import ambitor.easy.statemachine.workflow.model.StateMachineTask;
 
 import java.util.List;
 

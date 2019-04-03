@@ -1,15 +1,15 @@
-package ambitor.easy.statemachine.interceptor;
+package ambitor.easy.statemachine.workflow.interceptor;
 
 import ambitor.easy.statemachine.core.StateMachine;
 import ambitor.easy.statemachine.core.context.Message;
 import ambitor.easy.statemachine.core.interceptor.AbstractStateMachineInterceptor;
 import ambitor.easy.statemachine.core.state.State;
 import ambitor.easy.statemachine.core.transition.Transition;
-import ambitor.easy.statemachine.model.StateMachineConstant;
-import ambitor.easy.statemachine.model.StateMachineLog;
-import ambitor.easy.statemachine.model.StateMachineTask;
-import ambitor.easy.statemachine.service.StateMachineLogService;
-import ambitor.easy.statemachine.service.StateMachineTaskService;
+import ambitor.easy.statemachine.workflow.model.StateMachineConstant;
+import ambitor.easy.statemachine.workflow.model.StateMachineLog;
+import ambitor.easy.statemachine.workflow.model.StateMachineTask;
+import ambitor.easy.statemachine.workflow.service.StateMachineLogService;
+import ambitor.easy.statemachine.workflow.service.StateMachineTaskService;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
