@@ -160,7 +160,6 @@ public class AbstractStateMachine<S, E> implements StateMachine<S, E> {
                             nextEvent = transition.getEvent();
                             break;
                         }
-
                     }
                     Message<E> newMessage = new DefaultMessage<>(nextEvent, event.getHeaders());
                     accepted = sendEventInternal(newMessage);

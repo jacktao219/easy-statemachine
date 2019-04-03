@@ -20,5 +20,5 @@ public enum TaskStatus {
     /**
      * 添加此状态，用来让任务挂起不被扫描
      */
-    suspend;
+    suspend
 }

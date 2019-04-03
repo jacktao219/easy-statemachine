@@ -2,15 +2,8 @@ package ambitor.easy.statemachine.core.guard;
 
 
 import ambitor.easy.statemachine.core.exception.StateMachineException;
-import ambitor.easy.statemachine.core.guard.Guard;
-import ambitor.easy.statemachine.model.StateMachineTask;
-import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
-
-import java.util.Map;
-
-import static ambitor.easy.statemachine.model.StateMachineConstant.TASK_HEADER;
 
 @Slf4j
 public class DefaultGuard {
