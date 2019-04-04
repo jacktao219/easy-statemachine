@@ -1,90 +1,5 @@
 # 轻量级状态机工作流框架
 
-### 前话
-
-18年初开始和一班子兄弟在创业公司做信贷业务。开始人多，自己只负责还款功能，后来公司战线拉开人员调动比较大，放款也由我负责，摆在眼前的需求是接入两个新渠道方，放款流程也有所变化，阅读过之前的放款代码后发现很多可以优化的点，时间紧迫，花了一周时间晚上回家加班到凌晨写了一个基于状态机的工作流框架，经过一段时间完善与验证，目前已经推广到公司所有项目组。能写出一些通用框架提高团队开发效率还是很开心的，现在单独拎出来维护到GitHub做一个开源工作流框架，源码test包中有完整Demo可运行。
-
-### 优化效果
-
--   放款时间从原来的5分钟缩短为1分钟左右
--   流程完全解耦抽象，新接入渠道的放款开发最快半天搞定（是不是很棒，不要告诉我老板）
--   方便新人熟悉流程，节省学习成本，代码中有完整清晰的放款流程节点定义
--   方便查错，一眼就能看出来放款流程卡在哪个节点，每个节点操作日志自动落库
--   ...
-
-### 场景介绍
-
-信贷业务主要流程为`用户注册->风控系统授信->风控出额度->用户申请放款->用户还清贷款`，其中放款功能的简易流程如下`开立二类户->建档授信->签署合同->放款->出金`，其中出金还包括复杂子流程，流程图如下：
-
-![](https://oscimg.oschina.net/oscnet/dd5c192581ab6610ea1a64521b28636ff3f.jpg)
-
-                                                   （放款流程图）
-
-![](https://oscimg.oschina.net/oscnet/f30365910938757d659f6a6a1f7dbc0657b.jpg)
-
-                                                    （出金流程图）
-
-此类信贷业务是一个典型的工作流业务，并且针对不同渠道/流量方的接入放款的流程不同，需要重新定义流程，如下：
-
--   A渠道：`开立二类户->建档授信->等待建档授信回调->签署合同->放款->出金`
--   B渠道：`创建客户号->建档授信->等待建档授信回调->放款->出金`
--   C渠道：`开立二类户->建档授信->等待建档授信回调->放款->出金`
--   others...
-
-### 无状态机工作流实现逻辑
-
-第一版设计通过一张Task表实现，把每一步都抽象成一个task任务，每个任务有`任务类型、执行时间、重试次数、任务状态、请求参数、返回参数`等字段，然后有一个分布式的调度系统XXL-JOB(基于Quartz)不断的扫描这张表，把所有需要执行的task任务放到MQ并标记状态为Running，然后在消费者中会有任务类型对应的处理器Processor去执行相应业务，每次执行完后在上一个Processor中创建下一个任务task，整个流程的状态控制是在task的Processor中控制的。举例：
-
--   创建一条task_type为CreateCardII（开二类户）的task任务记录
--   XXL-JOB触发任务生产者，扫描到CreateCardII的task任务放入MQ
--   MQ消费者根据task_type找到对应的CreateCardIIProcessor（开二类户处理器）进行处理
--   开户成功则在CreateCardIIProcessor（开二类户处理器）中创建documentCredit（建档授信）的task任务，流程继续
--   开户失败则在CreateCardIIProcessor（开二类户处理器）中创建IncomingBack放款失败回调task任务，流程终止，放款失败
--   其它类似流程...
-
-![](https://oscimg.oschina.net/oscnet/1ac799117e571540ad6389f700bc10a51db.jpg)
-
-（一笔放款完整的Task）
-
-### 问题
-
-Q1.流程节点间代码完全耦合，无法适应易变的流程
-
-A1.流程中开二类户节点的下一个节点完全在代码中用硬代码`if else`写死，如果新渠道放款流程为`创建客户号->放款->出金`，改造成本太高，后期维护工作量大，无法适应节点顺序随意变化，伪代码：
-
-```
-class 二类户处理类 {
-    if( 开二类户成功 ) {
-        创建建档授信task任务
-    } else{
-        创建放款失败回调task任务
-    }
-}
-
-```
-
-Q2.放款时间长，生成Task任务多
-
-A2.由于XXL-JOB调度器是X秒调度一次，一次执行Y条，因为节点耦合每次调度一次只能执行一个节点的Task，执行完后生成的下一个节点Task只能下一次调度的时候才能触发，目前一个放款有15条Task，大致需要5~10分钟，随着量越来越大，task越来越多，放款时间将越来越久。
-
-Q3.放款流程当前在哪个节点状态不明确
-
-A3.由于分成15条Task去做，资产表状态只有父级状态`放款中、还款中、结清...`，不能很好区分当前资产处在放款中的子状态，比如`开二类户中、建档授信...`，不仅不利于问题排查，也不利于实时统计的细化(看需求)
-
-Q4.流程运行时节点之间的Session数据共享问题
-
-A4.流程节点之间往往可能需要数据共享，比如放款人信息在开二类户已经查出来，下一个建档授信节点应该不用再去查询，原Task实现方式只能把信息保存在下一个建档授信Task的request_data字段中，然后再查出来，但很多数据共享的场景本身更适合在内存中共享而不是数据库
-
-Q5.新人学习成本很大
-
-A5.以前分成15条Task实现的方式，没有地方写明每条Task的依赖关系，先后顺序等，导致新人来了之后除了看viso流程图，在代码中必须切入每个Task源码才能熟悉流程，刚开始就切入整个细节实现，学习成本高也非常繁琐，而工作流框架在状态机实现类中清晰定义了每个流程节点以及转换关系，通过后续简单的扩展可以支持XML、HTML配置工作流
-
-6.Others...
-
-### 工作流框架实现
-
-上面提到了诸如`代码解耦、高效率开发/维护、节省开发成本`等一系列好处，下面谈谈工作流的实现，整个工作流是基于状态机实现的，介绍工作流之前先介绍下状态机的概念
-
 #### 有限状态机定义
 
 有限状态机，（英语：Finite-state machine, FSM），又称有限状态自动机，简称状态机，是表示有限个状态以及在这些状态之间的转移和动作等行为的数学模型。有限状态机体现了两点：首先是离散的，然后是有限的。以下是对状态机抽象定义
@@ -105,19 +20,92 @@ Interceptor（拦截器）：对当前状态改变前、后进行监听拦截。
 
                                  状态机扭转图
 
-#### 状态机工作流
+### 状态机实现  待补
+状态机`代码解耦、高效率开发/维护、节省开发成本`等一系列好处....
+### 状态机使用
+目前支持以下两种方式配置状态机：
+- yml配置文件(推荐)：只需要编写少量的业务实现类和yml配置文件即可完成
+- 代码方式配置：稍微复杂，但可以更加直观的了解状态机的配置
+- web界面拖拽式配置(未来版本)
 
-决定使用工作流时参考了市面上很多开源的框架，不是动则近百MB，就是不满足项目实际场景，最后决定自己动手做。工作流有很多中实现方式`顺序流、WF、状态机`，第一种太简单，第二种太重，综合考虑选择使用状态机实现工作流，在选定状态机方式后又参考了Spring Statemachine,以下是和Spring Statemachine的一些特性对比
+#### yml配置方式
+```
+    #状态机名称
+    name: sf
+    
+    #状态配置
+    states:
+      init: WAIT_CREATE_CARDII          #等待开二类户
+      suspend:
+        - WAIT_DOCUMENT_CREDIT_CALLBACK #等待建档授信回调
+        - WAIT_GRANT_CHECK              #放款检查
+      end:
+        - CREATE_CARDII_FAILED          #开二类户失败
+        - DOCUMENT_CREDIT_FAILED        #建档授信失败
+        - GRANT_FAILED                  #放款失败
+        - GRANT_SUCCESS                 #结束流程
+      other:
+        - WAIT_DOCUMENT_CREDIT          #建档授信
+        - WAIT_GRANT                    #放款
+        - WAIT_GRANT_CHECK              #等待放款校验
+        - GRANT_TASK_SAVE               #主流程完成
+    
+    #事件配置
+    events:
+        - CREATE_CARDII                 #开二类户
+        - DOCUMENT_CREDIT               #建档授信
+        - DOCUMENT_CREDIT_CALLBACK      #建档授信回调
+        - GRANTED                       #放款
+        - GRANT_CHECKED                 #放款校验
+        - FINISHED                      #结束
+    
+    #转换器配置
+    transitions:
+        - type: standard                        #类型： 标准转换器
+          source: WAIT_CREATE_CARDII            #源状态：等待创建二类户
+          target: WAIT_DOCUMENT_CREDIT          #目标状态：等待建档授信
+          event:  CREATE_CARDII                 #事件：  创建二类户
+          action: SFCreateCardIIAction.class    #转换操作：创建二类户业务实现类
+          errorAction:
+    
+        - type: choice                          #类型：选择转换器
+          source: WAIT_DOCUMENT_CREDIT          #源状态：等待建档授信
+          event:  DOCUMENT_CREDIT               #事件：建档授信
+          action: SFDocumentCreditAction.class  #转换操作：建档授信业务实现类
+          errorAction:
+          if: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+          elseif: {status: DOCUMENT_CREDIT_STATUS,equals: WAIT_DOCUMENT_CREDIT_CALLBACK,target: WAIT_DOCUMENT_CREDIT_CALLBACK}
+          else: {target: DOCUMENT_CREDIT_FAILED}
+    
+        - type: choice
+          source: WAIT_DOCUMENT_CREDIT_CALLBACK  #源状态：等待建档授信回调
+          event:  DOCUMENT_CREDIT_CALLBACK       #事件： 建档授信回调
+          if: {key: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+          else: {target: DOCUMENT_CREDIT_FAILED}
+    
+        - type: choice
+          source: WAIT_GRANT                    #源状态：等待放款
+          event:  GRANTED                       #事件：放款
+          action: SFGrantAction.class           #转换操作：放款业务实现类
+          if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+          else: {target: WAIT_GRANT_CHECK}
+    
+        - type: choice
+          source: WAIT_GRANT_CHECK              #源状态：等待放款
+          event:  GRANT_CHECKED                 #事件：放款
+          action: SFGrantAction.class           #转换操作：放款业务实现类
+          if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+          else: {target: GRANT_FAILED}
+    
+        - type: standard
+          source: GRANT_TASK_SAVE               #源状态：放款任务保存
+          target: GRANT_SUCCESS                 #目标状态：放款成功
+          event:  FINISHED                      #事件：  放款结束
+          action: SFFinishAction.class          #转换操作：放款结束保存任务业务实现类
 
--   去掉了Spring Statemachine复杂的Region特性等...
--   增加了Suspend状态、一键触发全流程功能
--   源码设计上保证同一种工作流所有转换器、事件、状态都是无状态单例
--   流程之间通过SateContext进行Session会话共享
--   当前只实现了Standard Transition、Choice Transition两种转换器，暂不支持子流程转换器、Join Transition、Fork Transition
--   后面会加上用xml配置工作流
--   ...
+```
 
-放款流程的配置如下：
+#### 代码方式配置：
 
 ```
     /**
@@ -288,3 +276,4 @@ Interceptor（拦截器）：对当前状态改变前、后进行监听拦截。
     stateMachine.start(params);
 
 ```
+
