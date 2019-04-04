@@ -1,0 +1,72 @@
+#状态机名称
+name: sf
+
+#状态配置
+states:
+  init: WAIT_CREATE_CARDII          #等待开二类户
+  suspend:
+    - WAIT_DOCUMENT_CREDIT_CALLBACK #等待建档授信回调
+    - WAIT_GRANT_CHECK              #放款检查
+  end:
+    - CREATE_CARDII_FAILED          #开二类户失败
+    - DOCUMENT_CREDIT_FAILED        #建档授信失败
+    - GRANT_FAILED                  #放款失败
+    - GRANT_SUCCESS                 #结束流程
+  other:
+    - WAIT_DOCUMENT_CREDIT          #建档授信
+    - WAIT_GRANT                    #放款
+    - WAIT_GRANT_CHECK              #等待放款校验
+    - GRANT_TASK_SAVE               #主流程完成
+
+#事件配置
+events:
+    - CREATE_CARDII                 #开二类户
+    - DOCUMENT_CREDIT               #建档授信
+    - DOCUMENT_CREDIT_CALLBACK      #建档授信回调
+    - GRANTED                       #放款
+    - GRANT_CHECKED                 #放款校验
+    - FINISHED                      #结束
+
+#转换器配置
+transitions:
+    - type: standard                        #类型： 标准转换器
+      source: WAIT_CREATE_CARDII            #源状态：等待创建二类户
+      target: WAIT_DOCUMENT_CREDIT          #目标状态：等待建档授信
+      event:  CREATE_CARDII                 #事件：  创建二类户
+      action: SFCreateCardIIAction.class    #转换操作：创建二类户业务实现类
+      errorAction:
+
+    - type: choice                          #类型：选择转换器
+      source: WAIT_DOCUMENT_CREDIT          #源状态：等待建档授信
+      event:  DOCUMENT_CREDIT               #事件：建档授信
+      action: SFDocumentCreditAction.class  #转换操作：建档授信业务实现类
+      errorAction:
+      if: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+      elseif: {status: DOCUMENT_CREDIT_STATUS,equals: WAIT_DOCUMENT_CREDIT_CALLBACK,target: WAIT_DOCUMENT_CREDIT_CALLBACK}
+      else: {target: DOCUMENT_CREDIT_FAILED}
+
+    - type: choice
+      source: WAIT_DOCUMENT_CREDIT_CALLBACK  #源状态：等待建档授信回调
+      event:  DOCUMENT_CREDIT_CALLBACK       #事件： 建档授信回调
+      if: {key: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+      else: {target: DOCUMENT_CREDIT_FAILED}
+
+    - type: choice
+      source: WAIT_GRANT                    #源状态：等待放款
+      event:  GRANTED                       #事件：放款
+      action: SFGrantAction.class           #转换操作：放款业务实现类
+      if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+      else: {target: WAIT_GRANT_CHECK}
+
+    - type: choice
+      source: WAIT_GRANT_CHECK              #源状态：等待放款
+      event:  GRANT_CHECKED                 #事件：放款
+      action: SFGrantAction.class           #转换操作：放款业务实现类
+      if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+      else: {target: GRANT_FAILED}
+
+    - type: standard
+      source: GRANT_TASK_SAVE               #源状态：放款任务保存
+      target: GRANT_SUCCESS                 #目标状态：放款成功
+      event:  FINISHED                      #事件：  放款结束
+      action: SFFinishAction.class          #转换操作：放款结束保存任务业务实现类
