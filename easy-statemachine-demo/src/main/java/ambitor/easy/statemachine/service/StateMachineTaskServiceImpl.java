@@ -1,4 +1,4 @@
-package ambitor.easy.statemachine.sf.service;
+package ambitor.easy.statemachine.service;
 
 import ambitor.easy.statemachine.sf.enumerate.SFGrantState;
 import ambitor.easy.statemachine.workflow.model.StateMachineTask;
@@ -51,11 +51,22 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
         task.setNextRunTime(new Date());
         task.setScanStatus(TaskStatus.open.name());
         task.setCurrentTrytimes(0);
-        task.setMachineType("SF");
+        task.setMachineType("sf");
         task.setRequestData("mock模拟状态机Task");
         task.setRetryTimes(3);
         task.setTransactionId(String.valueOf(System.currentTimeMillis()));
         tasks.add(task);
+
+        StateMachineTask task1 = new StateMachineTask();
+        task1.setMachineState("准备食材");
+        task1.setNextRunTime(new Date());
+        task1.setScanStatus(TaskStatus.open.name());
+        task1.setCurrentTrytimes(0);
+        task1.setMachineType("eat");
+        task1.setRequestData("mock模拟状态机Task");
+        task1.setRetryTimes(3);
+        task1.setTransactionId(String.valueOf(System.currentTimeMillis()));
+        tasks.add(task1);
         return tasks;
     }
 }

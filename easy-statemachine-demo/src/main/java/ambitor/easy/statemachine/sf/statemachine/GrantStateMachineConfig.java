@@ -22,7 +22,7 @@ import java.util.EnumSet;
 import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.*;
 
 @Slf4j
-@EnableWithStateMachine
+//@EnableWithStateMachine
 public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGrantState, SFGrantEvent> {
 
     @Override
@@ -133,4 +133,5 @@ public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGra
     private SFGrantAction sfGrantAction;
     @Autowired
     private SFFinishAction sfFinishAction;
+
 }

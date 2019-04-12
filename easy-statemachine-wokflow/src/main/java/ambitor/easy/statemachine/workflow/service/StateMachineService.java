@@ -24,5 +24,5 @@ public interface StateMachineService {
      * 执行task
      * @param task 任务
      */
-    <S extends Enum<S>, E extends Enum<E>> void processTask(StateMachineTask task);
+    <S, E> void processTask(StateMachineTask task);
 }

@@ -1,6 +1,10 @@
 #状态机名称
 name: sf
 
+#拦截器配置
+interceptor:
+    - PersistStateMachineInterceptor.class
+
 #状态配置
 states:
   init: WAIT_CREATE_CARDII          #等待开二类户
@@ -41,29 +45,29 @@ transitions:
       event:  DOCUMENT_CREDIT               #事件：建档授信
       action: SFDocumentCreditAction.class  #转换操作：建档授信业务实现类
       errorAction:
-      if: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
-      elseif: {status: DOCUMENT_CREDIT_STATUS,equals: WAIT_DOCUMENT_CREDIT_CALLBACK,target: WAIT_DOCUMENT_CREDIT_CALLBACK}
-      else: {target: DOCUMENT_CREDIT_FAILED}
+      first: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+      then: {status: DOCUMENT_CREDIT_STATUS,equals: WAIT_DOCUMENT_CREDIT_CALLBACK,target: WAIT_DOCUMENT_CREDIT_CALLBACK}
+      last: {target: DOCUMENT_CREDIT_FAILED}
 
     - type: choice
       source: WAIT_DOCUMENT_CREDIT_CALLBACK  #源状态：等待建档授信回调
       event:  DOCUMENT_CREDIT_CALLBACK       #事件： 建档授信回调
-      if: {key: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
-      else: {target: DOCUMENT_CREDIT_FAILED}
+      first: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
+      last: {target: DOCUMENT_CREDIT_FAILED}
 
     - type: choice
       source: WAIT_GRANT                    #源状态：等待放款
       event:  GRANTED                       #事件：放款
       action: SFGrantAction.class           #转换操作：放款业务实现类
-      if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
-      else: {target: WAIT_GRANT_CHECK}
+      first: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+      last: {target: WAIT_GRANT_CHECK}
 
     - type: choice
       source: WAIT_GRANT_CHECK              #源状态：等待放款
       event:  GRANT_CHECKED                 #事件：放款
       action: SFGrantAction.class           #转换操作：放款业务实现类
-      if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
-      else: {target: GRANT_FAILED}
+      first: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
+      last: {target: GRANT_FAILED}
 
     - type: standard
       source: GRANT_TASK_SAVE               #源状态：放款任务保存

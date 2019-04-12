@@ -1,0 +1,70 @@
+#状态机名称
+name: eat
+
+#拦截器配置
+interceptor:
+    - PersistStateMachineInterceptor.class
+
+#状态配置
+states:
+  init: 准备食材
+  suspend:
+#    - 不用
+  end:
+    - 休息中
+  other:
+    - 准备米饭
+    - 准备炒菜
+    - 准备吃饭
+    - 老公准备洗碗            #-----由后吃完的人洗碗
+    - 老婆准备洗碗
+
+#事件配置
+events:
+    - 买菜
+    - 煮饭
+    - 炒菜
+    - 吃饭
+    - 洗碗
+
+#转换器配置
+transitions:
+    - type: standard
+      source: 准备食材
+      target: 准备米饭
+      event:  买菜
+      action: BuyFood.class
+      errorAction:
+
+    - type: standard
+      source: 准备米饭
+      target: 准备炒菜
+      event:  煮饭
+      action: CookRice.class
+      errorAction:
+
+    - type: standard
+      source: 准备炒菜
+      target: 准备吃饭
+      event:  炒菜
+      action: CookFood.class
+      errorAction:
+
+    - type: choice
+      source: 准备吃饭
+      event:  吃饭
+      action: EatRice.class
+      first: {status: Eat_Status,equals: Husband,target: 老公准备洗碗}
+      last: {target: 老婆准备洗碗}
+
+    - type: standard
+      source: 老婆准备洗碗
+      target: 休息中
+      event:  洗碗
+      action: WifeWash.class
+
+    - type: standard
+      source: 老公准备洗碗
+      target: 休息中
+      event:  洗碗
+      action: HusbandWash.class

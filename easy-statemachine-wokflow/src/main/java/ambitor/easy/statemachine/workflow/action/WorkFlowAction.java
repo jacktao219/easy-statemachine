@@ -14,6 +14,7 @@ import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK
 /**
  * 抽象Action，提供方法，方便Action实现类操作Task
  * Created by Ambitor on 2019/4/3
+ * @author Ambitor
  */
 public interface WorkFlowAction<S, E> extends Action<S, E> {
     /**
@@ -26,6 +27,11 @@ public interface WorkFlowAction<S, E> extends Action<S, E> {
         return (StateMachineTask) headers.getHeader(TASK_HEADER);
     }
 
+    /**
+     * 异常处理Action
+     * @param consumer 业务逻辑
+     * @return errorAction
+     */
     default Action<S, E> errorAction(Consumer<StateContext<S, E>> consumer) {
         return (s) -> {
             StateMachineTask task = getStateMachineTask(s);

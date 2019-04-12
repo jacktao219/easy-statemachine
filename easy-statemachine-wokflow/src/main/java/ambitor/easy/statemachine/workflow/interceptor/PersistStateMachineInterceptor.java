@@ -18,9 +18,13 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 持久化拦截器，状态发生改变后把当前状态信息持久化
+ * @author Ambitor
+ */
 @Slf4j
 @Component
-public class PersistStateMachineInterceptor<S extends Enum<S>, E extends Enum<E>> extends AbstractStateMachineInterceptor<S, E> {
+public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineInterceptor<S, E> {
 
     //加上action唯一执行key，方便日志查看
     public static final String TRANSITION_UNIQUE_ID = "transition_unique_id";
@@ -38,7 +42,7 @@ public class PersistStateMachineInterceptor<S extends Enum<S>, E extends Enum<E>
         StateMachineTask task = (StateMachineTask) message.getHeaders().getHeaders().get(StateMachineConstant.TASK_HEADER);
         StateMachineTask update = new StateMachineTask();
         update.setId(task.getId());
-        update.setMachineState(state.getId().name());
+        update.setMachineState(state.getId().toString());
         stateMachineTaskService.updateByPrimaryKeySelective(update);
         String tid = task.getId() + "-" + System.currentTimeMillis();
         log.info("状态发生改变 tid->{}", tid);
@@ -46,8 +50,8 @@ public class PersistStateMachineInterceptor<S extends Enum<S>, E extends Enum<E>
         String response = JSON.toJSONString(message.getHeaders());
         response = response.length() > MID_TEXT_LENGTH ? response.substring(0, MID_TEXT_LENGTH) : response;
         //保存转换日志
-        saveLog(task.getMachineCode(), message.getPayload().name(), transition.getSource().getId().name(),
-                state.getId().name(), Transition.SUCCESS, response);
+        saveLog(task.getMachineCode(), message.getPayload().toString(), transition.getSource().getId().toString(),
+                state.getId().toString(), Transition.SUCCESS, response);
 
     }
 
@@ -61,8 +65,8 @@ public class PersistStateMachineInterceptor<S extends Enum<S>, E extends Enum<E>
         response.put(TRANSITION_UNIQUE_ID, tid);
         log.error("状态机发生异常 tid->{}", tid);
         response.put("errorStack", JSON.toJSON(e));
-        saveLog(task.getMachineCode(), transition.getEvent().name(), stateMachine.getState().getId().name(),
-                transition.getTarget().getId().name(), Transition.FAILED, JSON.toJSONString(response));
+        saveLog(task.getMachineCode(), transition.getEvent().toString(), stateMachine.getState().getId().toString(),
+                transition.getTarget().getId().toString(), Transition.FAILED, JSON.toJSONString(response));
 
         return e;
     }

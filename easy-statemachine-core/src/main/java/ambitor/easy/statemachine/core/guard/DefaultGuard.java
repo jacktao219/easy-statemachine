@@ -5,6 +5,9 @@ import ambitor.easy.statemachine.core.exception.StateMachineException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
+/**
+ * @author Ambitor
+ */
 @Slf4j
 public class DefaultGuard {
     public static <S, E> Guard<S, E> condition(String key, String expect) {

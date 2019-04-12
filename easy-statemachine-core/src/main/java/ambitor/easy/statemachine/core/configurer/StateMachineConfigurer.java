@@ -7,6 +7,7 @@ import ambitor.easy.statemachine.core.transition.config.TransitionConfigurer;
 /**
  * 状态机配置
  * Created by Ambitor on 2019-01-21
+ * @author Ambitor
  * @param <S> 状态
  * @param <E> 事件
  */

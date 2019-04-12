@@ -1,4 +1,4 @@
-package ambitor.easy.statemachine.sf.service;
+package ambitor.easy.statemachine.service;
 
 import ambitor.easy.statemachine.workflow.model.StateMachineLog;
 import ambitor.easy.statemachine.workflow.service.StateMachineLogService;

@@ -7,6 +7,7 @@ import ambitor.easy.statemachine.core.exception.StateMachineException;
 /**
  * 默认标准转换配置
  * Created by Ambitor on 2019/1/21
+ * @author Ambitor
  * @param <S> 状态
  * @param <E> 事件
  */

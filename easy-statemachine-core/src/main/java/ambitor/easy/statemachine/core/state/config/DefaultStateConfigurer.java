@@ -16,6 +16,7 @@ import java.util.TreeMap;
 /**
  * 状态机状态配置类
  * Created by Ambitor on 2019/1/21
+ * @author Ambitor
  * @param <S> 状态
  * @param <E> 事件
  */
