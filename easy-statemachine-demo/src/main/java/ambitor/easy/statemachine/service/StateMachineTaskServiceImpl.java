@@ -67,6 +67,17 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
         task1.setRetryTimes(3);
         task1.setTransactionId(String.valueOf(System.currentTimeMillis()));
         tasks.add(task1);
+
+        StateMachineTask task2 = new StateMachineTask();
+        task2.setMachineState(SFGrantState.WAIT_CREATE_CARDII.name());
+        task2.setNextRunTime(new Date());
+        task2.setScanStatus(TaskStatus.open.name());
+        task2.setCurrentTrytimes(0);
+        task2.setMachineType("SF");
+        task2.setRequestData("mock模拟状态机Task");
+        task2.setRetryTimes(3);
+        task2.setTransactionId(String.valueOf(System.currentTimeMillis()));
+        tasks.add(task2);
         return tasks;
     }
 }

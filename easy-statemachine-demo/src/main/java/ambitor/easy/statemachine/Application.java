@@ -30,23 +30,5 @@ public class Application {
         for (StateMachineTask task : tasks) {
             stateMachineService.processTask(task);
         }
-
     }
-
-    public static void analysis() throws IOException {
-        //实例化解析器
-        Yaml yaml = new Yaml();
-        //配置文件地址
-        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-        Resource[] resources = resolver.getResources("classpath:statemachine\\*statemachine.yml");
-        for (Resource resource : resources) {
-            File file = resource.getFile();
-            FileInputStream fileInputStream = new FileInputStream(file);
-            //装载的对象，这里使用Map, 当然也可使用自己写的对象
-            StateMachineYmlConfig config = yaml.loadAs(fileInputStream, StateMachineYmlConfig.class);
-            System.out.println(JSON.toJSONString(config));
-        }
-
-    }
-
 }

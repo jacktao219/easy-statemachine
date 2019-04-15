@@ -16,6 +16,7 @@ public class EatRice implements WorkFlowAction<String, String> {
     @Override
     public void execute(StateContext<String, String> context) {
         log.info("开始吃饭");
+        addHeader(context, "Eat_Status", "Husband");
     }
 
 

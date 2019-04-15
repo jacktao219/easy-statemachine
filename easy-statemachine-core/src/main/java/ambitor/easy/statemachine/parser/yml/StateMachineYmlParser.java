@@ -2,7 +2,7 @@ package ambitor.easy.statemachine.parser.yml;
 
 import ambitor.easy.statemachine.core.action.Action;
 import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
-import ambitor.easy.statemachine.core.configurer.adapter.StateMachineConfigurerAdapter;
+import ambitor.easy.statemachine.core.configurer.adapter.AbstractStateMachineConfigurerAdapter;
 import ambitor.easy.statemachine.core.enumerate.TransitionType;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
 import ambitor.easy.statemachine.core.guard.DefaultGuard;
@@ -39,7 +39,7 @@ public class StateMachineYmlParser implements ApplicationContextAware, StateMach
      */
     @Override
     public StateMachineConfigurer parser(StateMachineYmlConfig config) {
-        return new StateMachineConfigurerAdapter<String, String>() {
+        return new AbstractStateMachineConfigurerAdapter<String, String>() {
             @Override
             public void configure(StateConfigurer<String, String> states) {
                 stateParser(states, config);

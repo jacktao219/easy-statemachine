@@ -5,7 +5,6 @@ import ambitor.easy.statemachine.core.StateMachine;
 import ambitor.easy.statemachine.core.action.Action;
 import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
 import ambitor.easy.statemachine.core.configurer.adapter.AbstractStateMachineConfigurerAdapter;
-import ambitor.easy.statemachine.core.configurer.adapter.StateMachineConfigurerAdapter;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
 import ambitor.easy.statemachine.core.guard.Guard;
 import ambitor.easy.statemachine.core.interceptor.StateMachineInterceptorList;
@@ -52,7 +51,7 @@ public class StateMachineFactory {
             if (!(stateMachineConfigurer instanceof AbstractStateMachineConfigurerAdapter)) {
                 throw new StateMachineException("stateMachineConfigurer must be AbstractStateMachineConfigurerAdapter instance ");
             }
-            StateMachineConfigurerAdapter<S, E> stateMachineConfigurerAdapter = (StateMachineConfigurerAdapter<S, E>) stateMachineConfigurer;
+            AbstractStateMachineConfigurerAdapter<S, E> stateMachineConfigurerAdapter = (AbstractStateMachineConfigurerAdapter<S, E>) stateMachineConfigurer;
             stateMachineConfigurerAdapter.init();
             String stateMachineName = stateMachineConfigurerAdapter.getName();
             //State

@@ -1,29 +1,53 @@
 package ambitor.easy.statemachine.workflow.service;
 
 import ambitor.easy.statemachine.core.StateMachine;
+import ambitor.easy.statemachine.core.annotation.EnableWithStateMachine;
 import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
 import ambitor.easy.statemachine.core.context.MessageHeaders;
 import ambitor.easy.statemachine.core.exception.StateMachineException;
 import ambitor.easy.statemachine.core.exception.StateMachineRetryException;
 import ambitor.easy.statemachine.core.factory.StateMachineFactory;
+import ambitor.easy.statemachine.parser.StateMachineParser;
+import ambitor.easy.statemachine.parser.yml.StateMachineYmlConfig;
+import ambitor.easy.statemachine.parser.yml.StateMachineYmlParser;
 import ambitor.easy.statemachine.workflow.model.StateMachineTask;
 import ambitor.easy.statemachine.workflow.model.TaskStatus;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.SpringProxy;
+import org.springframework.aop.TargetClassAware;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.yaml.snakeyaml.Yaml;
+import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
-import java.lang.reflect.TypeVariable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK_HEADER;
 
@@ -40,11 +64,30 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
      * @param stateMachineName 状态机名称
      * @return 配置
      */
+    @SuppressWarnings("unchecked")
     public <S, E> StateMachineConfigurer<S, E> getByName(String stateMachineName) {
         if (StringUtils.isEmpty(stateMachineName)) {
             throw new StateMachineException("状态机名称为空");
         }
-        return context.getBean(stateMachineName, StateMachineConfigurer.class);
+        StateMachineConfigurer configurer = configCache.get(stateMachineName);
+        if (configurer != null) {
+            return configurer;
+        }
+        Map<String, Object> stateMachineConfigs = context.getBeansWithAnnotation(EnableWithStateMachine.class);
+        Collection<Object> values = stateMachineConfigs.values();
+        if (!CollectionUtils.isEmpty(values)) {
+            for (Object stateMachineConfig : values) {
+                StateMachineConfigurer adapter = (StateMachineConfigurer) stateMachineConfig;
+                if (stateMachineName.equals(adapter.getName())) {
+                    configCache.put(stateMachineName, adapter);
+                    return adapter;
+                }
+            }
+        }
+        registerStateMachineConfigBean();
+        configurer = context.getBean(stateMachineName, StateMachineConfigurer.class);
+        configCache.put(stateMachineName, configurer);
+        return configurer;
     }
 
     /**
@@ -86,6 +129,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
      * @param task task
      */
     @Override
+    @SuppressWarnings("unchecked")
     public <S, E> void processTask(StateMachineTask task) {
         String transactionId = task.getTransactionId();
         log.info(" 状态机开始执行:{}", JSON.toJSONString(task));
@@ -98,8 +142,13 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             StateMachineConfigurer<S, E> configurer = getByName(task.getMachineType());
             //生成一个状态机
             StateMachine<S, E> stateMachine = StateMachineFactory.build(configurer);
-            //重置状态机的当前状态
-            stateMachine.resetStateMachine((S) task.getMachineState());
+            //获取状态机泛型类型
+            Class genericClass = getGenericSuperclass(configurer);
+            if (genericClass.isEnum()) {
+                stateMachine.resetStateMachine((S) Enum.valueOf(genericClass, task.getMachineState()));
+            } else if (genericClass == String.class) {
+                stateMachine.resetStateMachine((S) task.getMachineState());
+            }
             MessageHeaders headers = new MessageHeaders();
             headers.addHeader(TASK_HEADER, task);
             boolean accept = stateMachine.start(headers);
@@ -140,6 +189,49 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         }
     }
 
+    public static boolean isCglibProxy(@Nullable Object object) {
+        return (object instanceof SpringProxy &&
+                object.getClass().getName().contains(ClassUtils.CGLIB_CLASS_SEPARATOR));
+    }
+
+    public static Class<?> getTargetClass(Object candidate) {
+        if (candidate == null) {
+            throw new StateMachineException("candidate can not be null");
+        }
+        Class<?> result = null;
+        if (candidate instanceof TargetClassAware) {
+            result = ((TargetClassAware) candidate).getTargetClass();
+        }
+        if (result == null) {
+            result = (isCglibProxy(candidate) ? candidate.getClass().getSuperclass() : candidate.getClass());
+        }
+
+        return result;
+    }
+
+    /**
+     * 获取状态机状态的泛型Class对象
+     * @param configurer 状态机
+     * @return 状态机<S>状态的泛型Class
+     */
+    private static Class getGenericSuperclass(StateMachineConfigurer configurer) {
+        Class aClass = genericSuperclassCache.get(configurer);
+        if (aClass != null) {
+            return aClass;
+        }
+        Class<?> result = getTargetClass(configurer);
+        Type genericSuperclass = result.getGenericSuperclass();
+        while (!(genericSuperclass instanceof ParameterizedTypeImpl)) {
+            result = result.getSuperclass();
+            genericSuperclass = result.getGenericSuperclass();
+        }
+        ParameterizedTypeImpl type = (ParameterizedTypeImpl) genericSuperclass;
+        Class genericClass = (Class) type.getActualTypeArguments()[0];
+        genericSuperclassCache.put(configurer, genericClass);
+        return genericClass;
+    }
+
+
     /**
      * 获取容器
      * @param applicationContext 上下文
@@ -149,6 +241,40 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     public void setApplicationContext(ApplicationContext applicationContext)
             throws BeansException {
         context = applicationContext;
+    }
+
+    /**
+     * 根据Yml初始化状态机配置，并注入spring bean 容器
+     */
+    private void registerStateMachineConfigBean() {
+        try {
+            BeanFactory beanFactory =context.getAutowireCapableBeanFactory();
+            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
+            //实例化解析器
+            Yaml yaml = new Yaml();
+            //配置文件地址
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath:statemachine\\*statemachine*.yml");
+            for (Resource resource : resources) {
+                File file = resource.getFile();
+                FileInputStream fileInputStream = new FileInputStream(file);
+                StateMachineYmlConfig config = yaml.loadAs(fileInputStream, StateMachineYmlConfig.class);
+                log.info("load StateMachineYmlConfig {}", file.getName());
+                StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
+                String name = config.getName();
+                if (name == null || name.length() <= 0) {
+                    throw new StateMachineException("please defined name with .yml config");
+                }
+                if (beanFactory.containsBean(name)) {
+                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
+                }
+                context.getAutowireCapableBeanFactory().initializeBean(stateMachineConfigurer, name);
+            }
+        } catch (FileNotFoundException e) {
+            log.info("No StateMachineYmlConfig Found");
+        } catch (IOException e) {
+            throw new BeanCreationException("StateMachine.yml IOException", e);
+        }
     }
 
     /**
@@ -185,5 +311,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     @Autowired
     private StateMachineTaskService taskService;
     private static ApplicationContext context = null;
+    private static Map<String, StateMachineConfigurer> configCache = new ConcurrentHashMap<>();
+    private static Map<StateMachineConfigurer, Class> genericSuperclassCache = new ConcurrentHashMap<>();
 
 }

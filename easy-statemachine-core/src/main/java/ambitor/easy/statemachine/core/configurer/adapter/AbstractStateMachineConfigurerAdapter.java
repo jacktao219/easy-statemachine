@@ -80,4 +80,16 @@ public abstract class AbstractStateMachineConfigurerAdapter<S, E> implements Sta
         }
     }
 
+    public TransitionConfigurer<S, E> getTransitionConfigurer() {
+        return transitionConfigurer;
+    }
+
+    public StateConfigurer<S, E> getStateConfigurer() {
+        return stateConfigurer;
+    }
+
+    public StateMachineInterceptorConfigurer<S, E> getInterceptorConfigurer() {
+        return interceptorConfigurer;
+    }
+
 }

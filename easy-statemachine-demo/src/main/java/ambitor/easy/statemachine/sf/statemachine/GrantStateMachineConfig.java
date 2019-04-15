@@ -2,7 +2,7 @@ package ambitor.easy.statemachine.sf.statemachine;
 
 
 import ambitor.easy.statemachine.core.annotation.EnableWithStateMachine;
-import ambitor.easy.statemachine.core.configurer.adapter.StateMachineConfigurerAdapter;
+import ambitor.easy.statemachine.core.configurer.adapter.AbstractStateMachineConfigurerAdapter;
 import ambitor.easy.statemachine.core.guard.DefaultGuard;
 import ambitor.easy.statemachine.core.interceptor.StateMachineInterceptorConfigurer;
 import ambitor.easy.statemachine.core.state.config.StateConfigurer;
@@ -17,13 +17,14 @@ import ambitor.easy.statemachine.workflow.interceptor.PersistStateMachineInterce
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.lang.reflect.TypeVariable;
 import java.util.EnumSet;
 
 import static ambitor.easy.statemachine.sf.enumerate.GrantConstant.*;
 
 @Slf4j
-//@EnableWithStateMachine
-public class GrantStateMachineConfig extends StateMachineConfigurerAdapter<SFGrantState, SFGrantEvent> {
+@EnableWithStateMachine
+public class GrantStateMachineConfig extends AbstractStateMachineConfigurerAdapter<SFGrantState, SFGrantEvent> {
 
     @Override
     public void configure(StateConfigurer<SFGrantState, SFGrantEvent> states) {
