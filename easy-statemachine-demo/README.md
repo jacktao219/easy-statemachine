@@ -4,7 +4,7 @@
 
 
 #### yml配置方式
-使用此方式只需要简单的配置一个yml配置文件，然后编写BuyFood.class、CookRice.class、CookFood.class、EatRice.class、WifeWash.class、 HusbandWash.class的业务逻辑实现类，为方便理解Demo状态和事件都以中文表示，勿借鉴
+简单的配置一个yml配置文件，然后编写BuyFood.class、CookRice.class、CookFood.class、EatRice.class、WifeWash.class、 HusbandWash.class的业务逻辑实现类，为方便理解Demo状态和事件都以中文表示
 
 ```
 #状态机名称
