@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class HusbandWash implements WorkFlowAction<SFGrantState, SFGrantEvent> {
+public class HusbandWash implements WorkFlowAction<String, String> {
 
     @Override
-    public void execute(StateContext<SFGrantState, SFGrantEvent> context) {
+    public void execute(StateContext<String, String> context) {
         log.info("老公洗碗，随便洗洗");
     }
 
