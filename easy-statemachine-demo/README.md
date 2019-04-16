@@ -2,102 +2,81 @@
 
 ### Demo场景介绍
 
-信贷业务主要流程为`用户注册->风控系统授信->风控出额度->用户申请放款->用户还清贷款`，其中放款功能的简易流程如下`开立二类户->建档授信->签署合同->放款->出金`，其中出金还包括复杂子流程，流程图如下：
-
-![](https://oscimg.oschina.net/oscnet/dd5c192581ab6610ea1a64521b28636ff3f.jpg)
-
-                                                   （放款流程图）
-
-![](https://oscimg.oschina.net/oscnet/f30365910938757d659f6a6a1f7dbc0657b.jpg)
-
-                                                    （出金流程图）
-
-此类信贷业务是一个典型的工作流业务，并且针对不同渠道/流量方的接入放款的流程不同，需要重新定义流程，如下：
-
--   A渠道：`开立二类户->建档授信->等待建档授信回调->签署合同->放款->出金`
--   B渠道：`创建客户号->建档授信->等待建档授信回调->放款->出金`
--   C渠道：`开立二类户->建档授信->等待建档授信回调->放款->出金`
--   others...
-
-
-### 状态机工作流框架实现
-为了快速适应随时变化的流程需求，我们需要一个可随时调整流程，流程中不同节点业务代码完全解耦的架构来帮助我们增强代码的健壮性，稳定性以及提高开发效率，我们接下来看下使用easy-statemachine框架实现的步骤
 
 #### yml配置方式
-使用此方式只需要简单的配置一个yml配置文件，然后编写SFCreateCardIIAction.class、SFDocumentCreditAction.class等几个业务逻辑实现类
+使用此方式只需要简单的配置一个yml配置文件，然后编写BuyFood.class、CookRice.class、CookFood.class、EatRice.class、WifeWash.class、 HusbandWash.class的业务逻辑实现类，为方便理解Demo状态和事件都以中文表示，勿借鉴
+
 ```
-    #状态机名称
-    name: sf
-    
-    #状态配置
-    states:
-      init: WAIT_CREATE_CARDII          #等待开二类户
-      suspend:
-        - WAIT_DOCUMENT_CREDIT_CALLBACK #等待建档授信回调
-        - WAIT_GRANT_CHECK              #放款检查
-      end:
-        - CREATE_CARDII_FAILED          #开二类户失败
-        - DOCUMENT_CREDIT_FAILED        #建档授信失败
-        - GRANT_FAILED                  #放款失败
-        - GRANT_SUCCESS                 #结束流程
-      other:
-        - WAIT_DOCUMENT_CREDIT          #建档授信
-        - WAIT_GRANT                    #放款
-        - WAIT_GRANT_CHECK              #等待放款校验
-        - GRANT_TASK_SAVE               #主流程完成
-    
-    #事件配置
-    events:
-        - CREATE_CARDII                 #开二类户
-        - DOCUMENT_CREDIT               #建档授信
-        - DOCUMENT_CREDIT_CALLBACK      #建档授信回调
-        - GRANTED                       #放款
-        - GRANT_CHECKED                 #放款校验
-        - FINISHED                      #结束
-    
-    #转换器配置
-    transitions:
-        - type: standard                        #类型： 标准转换器
-          source: WAIT_CREATE_CARDII            #源状态：等待创建二类户
-          target: WAIT_DOCUMENT_CREDIT          #目标状态：等待建档授信
-          event:  CREATE_CARDII                 #事件：  创建二类户
-          action: SFCreateCardIIAction.class    #转换操作：创建二类户业务实现类
-          errorAction:
-    
-        - type: choice                          #类型：选择转换器
-          source: WAIT_DOCUMENT_CREDIT          #源状态：等待建档授信
-          event:  DOCUMENT_CREDIT               #事件：建档授信
-          action: SFDocumentCreditAction.class  #转换操作：建档授信业务实现类
-          errorAction:
-          if: {status: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
-          elseif: {status: DOCUMENT_CREDIT_STATUS,equals: WAIT_DOCUMENT_CREDIT_CALLBACK,target: WAIT_DOCUMENT_CREDIT_CALLBACK}
-          else: {target: DOCUMENT_CREDIT_FAILED}
-    
-        - type: choice
-          source: WAIT_DOCUMENT_CREDIT_CALLBACK  #源状态：等待建档授信回调
-          event:  DOCUMENT_CREDIT_CALLBACK       #事件： 建档授信回调
-          if: {key: DOCUMENT_CREDIT_STATUS,equals: DOCUMENT_CREDIT_SUCCESS,target: WAIT_GRANT}
-          else: {target: DOCUMENT_CREDIT_FAILED}
-    
-        - type: choice
-          source: WAIT_GRANT                    #源状态：等待放款
-          event:  GRANTED                       #事件：放款
-          action: SFGrantAction.class           #转换操作：放款业务实现类
-          if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
-          else: {target: WAIT_GRANT_CHECK}
-    
-        - type: choice
-          source: WAIT_GRANT_CHECK              #源状态：等待放款
-          event:  GRANT_CHECKED                 #事件：放款
-          action: SFGrantAction.class           #转换操作：放款业务实现类
-          if: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_TASK_SAVE}
-          else: {target: GRANT_FAILED}
-    
-        - type: standard
-          source: GRANT_TASK_SAVE               #源状态：放款任务保存
-          target: GRANT_SUCCESS                 #目标状态：放款成功
-          event:  FINISHED                      #事件：  放款结束
-          action: SFFinishAction.class          #转换操作：放款结束保存任务业务实现类
+#状态机名称
+name: eat
+
+#拦截器配置
+interceptor:
+    - PersistStateMachineInterceptor.class
+
+#状态配置
+states:
+  init: 准备食材
+  suspend:
+#    - 不用
+  end:
+    - 休息中
+  other:
+    - 准备米饭
+    - 准备炒菜
+    - 准备吃饭
+    - 老公准备洗碗            #-----由后吃完的人洗碗
+    - 老婆准备洗碗
+
+#事件配置
+events:
+    - 买菜
+    - 煮饭
+    - 炒菜
+    - 吃饭
+    - 洗碗
+
+#转换器配置
+transitions:
+    - type: standard
+      source: 准备食材
+      target: 准备米饭
+      event:  买菜
+      action: BuyFood.class
+      errorAction:
+
+    - type: standard
+      source: 准备米饭
+      target: 准备炒菜
+      event:  煮饭
+      action: CookRice.class
+      errorAction:
+
+    - type: standard
+      source: 准备炒菜
+      target: 准备吃饭
+      event:  炒菜
+      action: CookFood.class
+      errorAction:
+
+    - type: choice
+      source: 准备吃饭
+      event:  吃饭
+      action: EatRice.class
+      first: {status: Eat_Status,equals: Husband,target: 老公准备洗碗}
+      last: {target: 老婆准备洗碗}
+
+    - type: standard
+      source: 老婆准备洗碗
+      target: 休息中
+      event:  洗碗
+      action: WifeWash.class
+
+    - type: standard
+      source: 老公准备洗碗
+      target: 休息中
+      event:  洗碗
+      action: HusbandWash.class
 
 ```
 
