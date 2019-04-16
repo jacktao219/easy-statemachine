@@ -82,9 +82,9 @@ transitions:
 ####代码调用
 ```
     public class DemoTest{
-            //spring 上下文
+            
             @Autowired
-            ApplicationContext context
+            private ApplicationContext context
             
             public void runStateMachine(){
                 //根据状态机name获取状态机配置Bean
