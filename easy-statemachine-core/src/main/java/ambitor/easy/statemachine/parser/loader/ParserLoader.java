@@ -39,32 +39,32 @@ public class ParserLoader implements BeanFactoryPostProcessor {
      */
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-//        try {
-//            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
-//            //实例化解析器
-//            Yaml yaml = new Yaml();
-//            //配置文件地址
-//            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-//            Resource[] resources = resolver.getResources("classpath:statemachine\\*statemachine*.yml");
-//            for (Resource resource : resources) {
-//                File file = resource.getFile();
-//                FileInputStream fileInputStream = new FileInputStream(file);
-//                StateMachineYmlConfig config = yaml.loadAs(fileInputStream, StateMachineYmlConfig.class);
-//                log.info("load StateMachineYmlConfig {}", file.getName());
-//                StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
-//                String name = config.getName();
-//                if (name == null || name.length() <= 0) {
-//                    throw new StateMachineException("please defined name with .yml config");
-//                }
-//                if (beanFactory.containsBean(name)) {
-//                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
-//                }
-//                beanFactory.registerSingleton(name, stateMachineConfigurer);
-//            }
-//        } catch (FileNotFoundException e) {
-//            log.info("No StateMachineYmlConfig Found");
-//        } catch (IOException e) {
-//            throw new BeanCreationException("StateMachine.yml IOException", e);
-//        }
+        try {
+            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
+            //实例化解析器
+            Yaml yaml = new Yaml();
+            //配置文件地址
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath:statemachine\\*statemachine*.yml");
+            for (Resource resource : resources) {
+                File file = resource.getFile();
+                FileInputStream fileInputStream = new FileInputStream(file);
+                StateMachineYmlConfig config = yaml.loadAs(fileInputStream, StateMachineYmlConfig.class);
+                log.info("load StateMachineYmlConfig {}", file.getName());
+                StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
+                String name = config.getName();
+                if (name == null || name.length() <= 0) {
+                    throw new StateMachineException("please defined name with .yml config");
+                }
+                if (beanFactory.containsBean(name)) {
+                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
+                }
+                beanFactory.registerSingleton(name, stateMachineConfigurer);
+            }
+        } catch (FileNotFoundException e) {
+            log.info("No StateMachineYmlConfig Found");
+        } catch (IOException e) {
+            throw new BeanCreationException("StateMachine.yml IOException", e);
+        }
     }
 }

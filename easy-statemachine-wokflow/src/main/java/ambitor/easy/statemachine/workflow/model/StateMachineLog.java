@@ -16,5 +16,6 @@ public class StateMachineLog {
     private String transitionResult;
     private Date createTime;
     private Date updateTime;
+    private String request;
     private String response;
 }

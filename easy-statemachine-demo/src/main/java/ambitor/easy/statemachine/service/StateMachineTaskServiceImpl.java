@@ -1,6 +1,6 @@
 package ambitor.easy.statemachine.service;
 
-import ambitor.easy.statemachine.sf.enumerate.SFGrantState;
+import ambitor.easy.statemachine.sf.enumerate.GrantState;
 import ambitor.easy.statemachine.workflow.model.StateMachineTask;
 import ambitor.easy.statemachine.workflow.model.TaskStatus;
 import ambitor.easy.statemachine.workflow.service.StateMachineTaskService;
@@ -28,6 +28,11 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
         return 1;
     }
 
+    @Override
+    public StateMachineTask findByCode(String code) {
+        return new StateMachineTask();
+    }
+
     /**
      * 根据主键修改状态机任务
      * @param task 状态机
@@ -47,7 +52,7 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
     public List<StateMachineTask> getExecuteTask() {
         List<StateMachineTask> tasks = new ArrayList<>();
         StateMachineTask task = new StateMachineTask();
-        task.setMachineState(SFGrantState.WAIT_CREATE_CARDII.name());
+        task.setMachineState(GrantState.WAIT_CREATE_CARDII.name());
         task.setNextRunTime(new Date());
         task.setScanStatus(TaskStatus.open.name());
         task.setCurrentTrytimes(0);
@@ -69,7 +74,7 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
         tasks.add(task1);
 
         StateMachineTask task2 = new StateMachineTask();
-        task2.setMachineState(SFGrantState.WAIT_CREATE_CARDII.name());
+        task2.setMachineState(GrantState.WAIT_CREATE_CARDII.name());
         task2.setNextRunTime(new Date());
         task2.setScanStatus(TaskStatus.open.name());
         task2.setCurrentTrytimes(0);

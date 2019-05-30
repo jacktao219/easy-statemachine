@@ -25,8 +25,9 @@ CREATE TABLE `state_machine_log` (
   `target` varchar(48) DEFAULT NULL COMMENT '目标状态',
   `event` varchar(48) DEFAULT NULL COMMENT '事件',
   `transition_result` varchar(48) DEFAULT NULL COMMENT '状态扭转结果',
+  `request` text COMMENT '请求参数',
   `response` mediumtext COMMENT '返回信息',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2879 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2879 DEFAULT CHARSET=utf8mb4

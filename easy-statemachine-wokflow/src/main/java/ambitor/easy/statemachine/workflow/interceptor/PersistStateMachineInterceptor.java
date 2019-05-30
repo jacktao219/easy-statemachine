@@ -35,15 +35,9 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
     private StateMachineLogService stateMachineLogService;
 
     @Override
-    public void afterStateChange(State<S, E> state, Message<E> message, Transition<S, E> transition, StateMachine<S, E> stateMachine) {
-        super.afterStateChange(state, message, transition, stateMachine);
-
+    public void afterStateChange(State<S, E> target, Message<E> message, Transition<S, E> transition, StateMachine<S, E> stateMachine) {
         log.info("状态改变持久化到数据库");
         StateMachineTask task = (StateMachineTask) message.getHeaders().getHeaders().get(StateMachineConstant.TASK_HEADER);
-        StateMachineTask update = new StateMachineTask();
-        update.setId(task.getId());
-        update.setMachineState(state.getId().toString());
-        stateMachineTaskService.updateByPrimaryKeySelective(update);
         String tid = task.getId() + "-" + System.currentTimeMillis();
         log.info("状态发生改变 tid->{}", tid);
         message.getHeaders().addHeader(TRANSITION_UNIQUE_ID, tid);
@@ -51,9 +45,16 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         response = response.length() > MID_TEXT_LENGTH ? response.substring(0, MID_TEXT_LENGTH) : response;
         //保存转换日志
         saveLog(task.getMachineCode(), message.getPayload().toString(), transition.getSource().getId().toString(),
-                state.getId().toString(), Transition.SUCCESS, response);
-
+                target.getId().toString(), Transition.SUCCESS, response);
+        //修改数据库
+        StateMachineTask update = new StateMachineTask();
+        update.setId(task.getId());
+        update.setMachineState(target.getId().toString());
+        update.setRequestData(task.getRequestData());
+        update.setResponseData(task.getResponseData());
+        stateMachineTaskService.updateByPrimaryKeySelective(update);
     }
+
 
     @Override
     public Exception stateMachineError(StateMachine<S, E> stateMachine, Exception e) {
@@ -65,13 +66,19 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         response.put(TRANSITION_UNIQUE_ID, tid);
         log.error("状态机发生异常 tid->{}", tid);
         response.put("errorStack", JSON.toJSON(e));
+        String errorMsg = JSON.toJSONString(response);
         saveLog(task.getMachineCode(), transition.getEvent().toString(), stateMachine.getState().getId().toString(),
-                transition.getTarget().getId().toString(), Transition.FAILED, JSON.toJSONString(response));
-
+                transition.getTarget().getId().toString(), Transition.FAILED, errorMsg);
+        //修改数据库
+        StateMachineTask update = new StateMachineTask();
+        update.setId(task.getId());
+        update.setResponseData(errorMsg);
+        stateMachineTaskService.updateByPrimaryKeySelective(update);
         return e;
     }
 
     private void saveLog(String code, String event, String source, String target, String result, String response) {
+        StateMachineTask original = stateMachineTaskService.findByCode(code);
         //保存log
         StateMachineLog record = new StateMachineLog();
         record.setMachineCode(code);
@@ -79,6 +86,7 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         record.setSource(source);
         record.setTarget(target);
         record.setTransitionResult(result);
+        record.setRequest(original.getRequestData());
         record.setResponse(response);
         stateMachineLogService.insertSelective(record);
     }

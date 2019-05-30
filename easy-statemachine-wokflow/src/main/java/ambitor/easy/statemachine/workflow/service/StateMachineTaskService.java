@@ -18,6 +18,13 @@ public interface StateMachineTaskService {
     int insertSelective(StateMachineTask task);
 
     /**
+     * 根据机器code查询
+     * @param code 机器码
+     * @return 状态机
+     */
+    StateMachineTask findByCode(String code);
+
+    /**
      * 根据主键修改状态机任务
      * @param task 状态机
      * @return 影响行
@@ -29,4 +36,6 @@ public interface StateMachineTaskService {
      * @return 状态机任务
      */
     List<StateMachineTask> getExecuteTask();
+
+
 }

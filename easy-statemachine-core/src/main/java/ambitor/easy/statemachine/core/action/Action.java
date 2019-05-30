@@ -31,4 +31,14 @@ public interface Action<S, E> {
         headers.addHeader(key, value);
     }
 
+    /**
+     * 上下文中获取信息，会被序列化到数据库中的Response_data
+     * @param context 上下文
+     * @param key     key
+     */
+    default <T> T getHeader(StateContext<S, E> context, String key) {
+        MessageHeaders headers = context.getMessage().getHeaders();
+        return (T) headers.getHeader(key);
+    }
+
 }

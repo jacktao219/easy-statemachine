@@ -1,5 +1,6 @@
 package ambitor.easy.statemachine.workflow.service;
 
+import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
 import ambitor.easy.statemachine.workflow.model.StateMachineTask;
 
 import java.util.List;
@@ -9,6 +10,15 @@ import java.util.List;
  * Created by Ambitor on 2019/4/2
  */
 public interface StateMachineService {
+
+    /**
+     * 根据状态机名获取状态机配置
+     * @param stateMachineName
+     * @param <S>
+     * @param <E>
+     * @return
+     */
+    <S, E> StateMachineConfigurer<S, E> getByName(String stateMachineName);
 
     /**
      * 通过定时调度启动任务

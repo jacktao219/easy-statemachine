@@ -28,7 +28,7 @@ public interface WorkFlowAction<S, E> extends Action<S, E> {
     }
 
     /**
-     * 异常处理Action
+     * 异常处理Action, action抛出异常后会进入errorAction，详细请看Actions.errorCallingAction实现
      * @param consumer 业务逻辑
      * @return errorAction
      */
@@ -37,12 +37,20 @@ public interface WorkFlowAction<S, E> extends Action<S, E> {
             StateMachineTask task = getStateMachineTask(s);
             //如果是最后一次重试
             Exception e = s.getException();
-            //非RetryException不重试
-            if (e != null && e instanceof StateMachineRetryException) {
+            if (e == null) {
+                throw new StateMachineRetryException("未知异常");
+            }
+            boolean isRetryException = e instanceof StateMachineRetryException;
+            //非重试异常
+            if (!isRetryException) {
+                consumer.accept(s);
+                throw new StateMachineException(e.getMessage(), e);
+            } else {
+                //重试异常且最后一次尝试
                 if (task.isLastRetry()) {
                     consumer.accept(s);
                 } else {
-                    throw new StateMachineException(s.getException());
+                    throw (StateMachineRetryException) e;
                 }
             }
         };

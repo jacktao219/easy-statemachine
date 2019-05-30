@@ -62,6 +62,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
      * @param stateMachineName 状态机名称
      * @return 配置
      */
+    @Override
     @SuppressWarnings("unchecked")
     public <S, E> StateMachineConfigurer<S, E> getByName(String stateMachineName) {
         if (StringUtils.isEmpty(stateMachineName)) {
@@ -149,6 +150,8 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 stateMachine.resetStateMachine((S) task.getMachineState());
             }
             MessageHeaders headers = new MessageHeaders();
+            //新流程应该有新的response
+            task.setResponseData(null);
             headers.addHeader(TASK_HEADER, task);
             boolean accept = stateMachine.start(headers);
             StateMachineTask update = new StateMachineTask();
@@ -157,14 +160,11 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                     stateMachine.getState().getId(), stateMachine.getStateMachineError());
             if (!accept) {
                 //没有接受的话保存异常信息到StateMachineTask
-                update.setResponseData(JSON.toJSONString(stateMachine.getStateMachineError()));
                 update.setScanStatus(task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name());
                 update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
             } else {
                 //如果不是结束状态，并且接受了，则重置currentTryTimes
                 update.setCurrentTrytimes(0);
-                //设置response
-                update.setResponseData(task.getResponseData());
                 //设置scanStatus
                 update.setScanStatus(stateMachine.getState().isSuspend() ? TaskStatus.suspend.name() : TaskStatus.open.name());
                 //如果是结束状态
@@ -173,27 +173,38 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 }
             }
             taskService.updateByPrimaryKeySelective(update);
+        } catch (StateMachineRetryException e) {
+            log.error("状态机发生可重试异常 tid->{}", transactionId, e);
+            String scanStatus = task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name();
+            Date nextRunTime = localDateTime2Date(LocalDateTime.now().plusMinutes(5));
+            updateTaskWhenException(task.getId(), scanStatus, nextRunTime, e);
         } catch (Exception e) {
-            log.error("{}状态机执行发生异常", transactionId, e);
-            StateMachineTask update = new StateMachineTask();
-            //没有接受的话保存异常信息到StateMachineTask
-            update.setId(task.getId());
-            update.setResponseData(JSON.toJSONString(e));
-            update.setScanStatus(task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name());
-            update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
-            taskService.updateByPrimaryKeySelective(update);
+            log.error("状态机执行发生非重试异常 tid->{}", transactionId, e);
+            updateTaskWhenException(task.getId(), TaskStatus.close.name(), null, e);
         } finally {
-            log.info("{} 释放锁", transactionId);
+            log.info("释放锁 tid->{}", transactionId);
             unLock(transactionId);
         }
     }
 
-    public static boolean isCglibProxy(@Nullable Object object) {
+    private void updateTaskWhenException(Integer taskId, String status, Date nextRunTime, Exception e) {
+        //没有接受的话保存异常信息到StateMachineTask
+        StateMachineTask update = new StateMachineTask();
+        update.setId(taskId);
+        update.setResponseData(JSON.toJSONString(e));
+        update.setScanStatus(status);
+        if (nextRunTime != null) {
+            update.setNextRunTime(nextRunTime);
+        }
+        taskService.updateByPrimaryKeySelective(update);
+    }
+
+    private static boolean isCglibProxy(@Nullable Object object) {
         return (object instanceof SpringProxy &&
                 object.getClass().getName().contains(ClassUtils.CGLIB_CLASS_SEPARATOR));
     }
 
-    public static Class<?> getTargetClass(Object candidate) {
+    private static Class<?> getTargetClass(Object candidate) {
         if (candidate == null) {
             throw new StateMachineException("candidate can not be null");
         }
