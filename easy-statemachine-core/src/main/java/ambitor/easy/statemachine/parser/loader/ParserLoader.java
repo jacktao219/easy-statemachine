@@ -45,7 +45,7 @@ public class ParserLoader implements BeanFactoryPostProcessor {
             Yaml yaml = new Yaml();
             //配置文件地址
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-            Resource[] resources = resolver.getResources("classpath:statemachine\\*statemachine*.yml");
+            Resource[] resources = resolver.getResources("classpath*:statemachine\\*statemachine*.yml");
             for (Resource resource : resources) {
                 File file = resource.getFile();
                 FileInputStream fileInputStream = new FileInputStream(file);
