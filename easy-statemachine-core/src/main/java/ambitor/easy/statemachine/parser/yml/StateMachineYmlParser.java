@@ -18,7 +18,10 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,8 @@ import java.util.Map;
 @Slf4j
 @Component
 public class StateMachineYmlParser implements ApplicationContextAware, StateMachineParser<StateMachineYmlConfig> {
+
+    public static final String POINT = ".";
 
     /**
      * 状态机YML配置解析方法
@@ -86,6 +91,7 @@ public class StateMachineYmlParser implements ApplicationContextAware, StateMach
      * @param transitions 转换器配置
      * @param config      yml配置文件
      */
+    @SuppressWarnings("unchecked")
     private void transitionParser(TransitionConfigurer<String, String> transitions, StateMachineYmlConfig config) {
         List<StateMachineYmlConfig.TransitionEntry> configTransitions = config.getTransitions();
         if (configTransitions != null && configTransitions.size() > 0) {
@@ -97,7 +103,29 @@ public class StateMachineYmlParser implements ApplicationContextAware, StateMach
                 String type = entry.getType();
                 String source = entry.getSource();
                 Action<String, String> action = getBeanByClassName(Action.class, entry.getAction());
-                Action<String, String> errorAction = getBeanByClassName(Action.class, entry.getErrorAction());
+                String errorActionName = entry.getErrorAction();
+                Action<String, String> errorAction = null;
+                if (!StringUtils.isEmpty(errorActionName) && errorActionName.contains(POINT)) {
+                    //支持ClassName.method() 通过方法返回匿名类,只支持无参方法
+                    String[] array = errorActionName.split("\\" + POINT);
+                    String className = array[0];
+                    Action<String, String> error = getBeanByClassName(Action.class, className);
+                    if (error == null) {
+                        throw new StateMachineException("can not found error class " + className);
+                    }
+                    String methodName = array[1];
+                    Method method = ReflectionUtils.findMethod(error.getClass(), methodName);
+                    if (method == null) {
+                        throw new StateMachineException("can not found method " + methodName + " in class " + className);
+                    }
+                    Object object = ReflectionUtils.invokeMethod(method, error);
+                    if (!(object instanceof Action)) {
+                        throw new StateMachineException(config.getName() + " machine " + errorActionName + " errorAction return value is not Action instance");
+                    }
+                    errorAction = (Action<String, String>) object;
+                } else {
+                    errorAction = getBeanByClassName(Action.class, errorActionName);
+                }
                 String event = entry.getEvent();
                 if (TransitionType.standard.name().equals(type)) {
                     String target = entry.getTarget();

@@ -7,9 +7,9 @@ import ambitor.easy.statemachine.core.exception.StateMachineException;
 /**
  * 默认标准转换配置
  * Created by Ambitor on 2019/1/21
- * @author Ambitor
  * @param <S> 状态
  * @param <E> 事件
+ * @author Ambitor
  */
 public class DefaultStandardTransitionConfigurer<S, E> extends BaseTransitionConfigurer<S, E>
         implements StandardTransitionConfigurer<S, E> {
@@ -42,7 +42,7 @@ public class DefaultStandardTransitionConfigurer<S, E> extends BaseTransitionCon
     @Override
     public DefaultStandardTransitionConfigurer<S, E> action(Action<S, E> action) {
         if (action == null) {
-            throw new StateMachineException("action can not be null");
+            throw new StateMachineException(getSource() + "action can not be null");
         }
         addAction(action);
         return this;
@@ -51,7 +51,7 @@ public class DefaultStandardTransitionConfigurer<S, E> extends BaseTransitionCon
     @Override
     public DefaultStandardTransitionConfigurer<S, E> action(Action<S, E> action, Action<S, E> error) {
         if (action == null) {
-            throw new StateMachineException("action can not be null");
+            throw new StateMachineException(getSource() + " source action can not be null");
         }
         addAction(action, error);
         return this;

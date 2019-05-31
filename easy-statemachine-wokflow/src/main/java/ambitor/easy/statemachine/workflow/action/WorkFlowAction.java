@@ -44,7 +44,6 @@ public interface WorkFlowAction<S, E> extends Action<S, E> {
             //非重试异常
             if (!isRetryException) {
                 consumer.accept(s);
-                throw new StateMachineException(e.getMessage(), e);
             } else {
                 //重试异常且最后一次尝试
                 if (task.isLastRetry()) {

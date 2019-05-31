@@ -1,9 +1,8 @@
 package ambitor.easy.statemachine.sf.enumerate;
 
 /**
- * 360放款状态流程
  */
-public enum SFGrantState {
+public enum GrantState {
     //等待开二类户
     WAIT_CREATE_CARDII,
     //开二类户失败

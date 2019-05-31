@@ -1,6 +1,6 @@
 package ambitor.easy.statemachine.sf.enumerate;
 
-public enum SFGrantEvent {
+public enum GrantEvent {
     //开二类户
     CREATE_CARDII,
     //建档授信
