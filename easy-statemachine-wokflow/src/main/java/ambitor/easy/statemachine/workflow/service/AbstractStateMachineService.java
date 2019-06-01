@@ -19,11 +19,11 @@ import org.springframework.aop.TargetClassAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,14 +33,14 @@ import org.springframework.util.StringUtils;
 import org.yaml.snakeyaml.Yaml;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -56,6 +56,9 @@ import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK
 @Slf4j
 @Component
 public abstract class AbstractStateMachineService implements ApplicationContextAware, StateMachineService {
+
+    @Value(value = "classpath*:statemachine/*statemachine*.yml")
+    private Resource[] resources;
 
     /**
      * 通过状态机名称拿到状态机Configurer
@@ -255,43 +258,6 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     }
 
     /**
-     * 根据Yml初始化状态机配置，并注入spring bean 容器
-     */
-    private void registerStateMachineConfigBean(String stateMachineName) {
-        try {
-            DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) context.getAutowireCapableBeanFactory();
-            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
-            //实例化解析器
-            Yaml yaml = new Yaml();
-            //配置文件地址
-            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-            Resource[] resources = resolver.getResources(CLASSPATH_STATEMACHINE_YML);
-            for (Resource resource : resources) {
-                File file = resource.getFile();
-                FileInputStream fileInputStream = new FileInputStream(file);
-                StateMachineYmlConfig config = yaml.loadAs(fileInputStream, StateMachineYmlConfig.class);
-                String name = config.getName();
-                if (name == null || name.length() <= 0) {
-                    throw new StateMachineException("please defined name with .yml config");
-                }
-                if (!stateMachineName.equals(name)) {
-                    continue;
-                }
-                log.info("load StateMachineYmlConfig {}", file.getName());
-                StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
-                if (beanFactory.containsBean(name)) {
-                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
-                }
-                beanFactory.registerSingleton(name, stateMachineConfigurer);
-            }
-        } catch (FileNotFoundException e) {
-            log.info("No StateMachineYmlConfig Found");
-        } catch (IOException e) {
-            throw new BeanCreationException("StateMachine.yml IOException", e);
-        }
-    }
-
-    /**
      * 时间转换
      * @param localDateTime 时间
      */
@@ -301,6 +267,50 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         return Date.from(instant);
     }
 
+    /**
+     * 根据Yml初始化状态机配置，并注入spring bean 容器
+     */
+    private void registerStateMachineConfigBean(String stateMachineName) {
+        try {
+            DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) context.getAutowireCapableBeanFactory();
+            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
+            //实例化解析器
+            Yaml yaml = new Yaml();
+            List<InputStream> inputStreams = getStateMachineFiles();
+            log.info("Find StateMachineYmlConfig yml " + inputStreams.size() + " count");
+            for (InputStream inputStream : inputStreams) {
+                StateMachineYmlConfig config = yaml.loadAs(inputStream, StateMachineYmlConfig.class);
+                String name = config.getName();
+                if (name == null || name.length() <= 0) {
+                    throw new StateMachineException("please defined name with .yml config");
+                }
+                log.info("load StateMachineYmlConfig {}", name);
+                StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
+                if (beanFactory.containsBean(name)) {
+                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
+                }
+                beanFactory.registerSingleton(name, stateMachineConfigurer);
+            }
+        } catch (FileNotFoundException e) {
+            log.info("find StateMachineYmlConfig Error", e);
+        } catch (IOException e) {
+            throw new BeanCreationException("StateMachine.yml IOException", e);
+        }
+    }
+
+    protected List<InputStream> getStateMachineFiles() throws IOException {
+        //配置文件地址
+        Resource[] resources = getResources();
+        List<InputStream> files = new ArrayList<>(5);
+        for (Resource resource : resources) {
+            files.add(resource.getInputStream());
+        }
+        return files;
+    }
+
+    protected Resource[] getResources() {
+        return resources;
+    }
 
     /**
      * 放入MQ
@@ -327,6 +337,5 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     private static ApplicationContext context = null;
     private static Map<String, StateMachineConfigurer> configCache = new ConcurrentHashMap<>();
     private static Map<StateMachineConfigurer, Class> genericSuperclassCache = new ConcurrentHashMap<>();
-    private static final String CLASSPATH_STATEMACHINE_YML = "classpath:statemachine\\*statemachine*.yml";
 
 }

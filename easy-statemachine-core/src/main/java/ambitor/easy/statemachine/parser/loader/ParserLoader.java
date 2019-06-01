@@ -11,8 +11,10 @@ import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.util.ResourceUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
@@ -26,7 +28,7 @@ import java.io.IOException;
  * @author Ambitor
  */
 @Slf4j
-@Configuration
+//@Configuration
 public class ParserLoader implements BeanFactoryPostProcessor {
 
     /**
@@ -45,7 +47,8 @@ public class ParserLoader implements BeanFactoryPostProcessor {
             Yaml yaml = new Yaml();
             //配置文件地址
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-            Resource[] resources = resolver.getResources("classpath*:statemachine\\*statemachine*.yml");
+            Resource[] resources = resolver.getResources("statemachine\\*statemachine*.yml");
+            log.info("find StateMachineYmlConfig " + resources.length + " count");
             for (Resource resource : resources) {
                 File file = resource.getFile();
                 FileInputStream fileInputStream = new FileInputStream(file);
@@ -62,7 +65,7 @@ public class ParserLoader implements BeanFactoryPostProcessor {
                 beanFactory.registerSingleton(name, stateMachineConfigurer);
             }
         } catch (FileNotFoundException e) {
-            log.info("No StateMachineYmlConfig Found");
+            log.info("No StateMachineYmlConfig Found", e);
         } catch (IOException e) {
             throw new BeanCreationException("StateMachine.yml IOException", e);
         }
