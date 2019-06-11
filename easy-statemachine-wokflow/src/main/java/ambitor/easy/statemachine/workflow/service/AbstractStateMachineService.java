@@ -88,9 +88,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         }
         //根据Yml初始化状态机配置，并注入spring bean 容器
         registerStateMachineConfigBean(stateMachineName);
-        configurer = context.getBean(stateMachineName, StateMachineConfigurer.class);
-        configCache.put(stateMachineName, configurer);
-        return configurer;
+        return context.getBean(stateMachineName, StateMachineConfigurer.class);
     }
 
     /**
@@ -153,8 +151,6 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 stateMachine.resetStateMachine((S) task.getMachineState());
             }
             MessageHeaders headers = new MessageHeaders();
-            //新流程应该有新的response
-            task.setResponseData(null);
             headers.addHeader(TASK_HEADER, task);
             boolean accept = stateMachine.start(headers);
             StateMachineTask update = new StateMachineTask();
@@ -162,9 +158,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             log.info("{}状态机执行结束,accept：{},当前状态{},异常{}", transactionId, accept,
                     stateMachine.getState().getId(), stateMachine.getStateMachineError());
             if (!accept) {
-                //没有接受的话保存异常信息到StateMachineTask
-                update.setScanStatus(task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name());
-                update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
+                throw stateMachine.getStateMachineError();
             } else {
                 //如果不是结束状态，并且接受了，则重置currentTryTimes
                 update.setCurrentTrytimes(0);
@@ -175,31 +169,29 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                     update.setScanStatus(TaskStatus.close.name());
                 }
             }
+            update.setResponseData(JSON.toJSONString(headers));
             taskService.updateByPrimaryKeySelective(update);
         } catch (StateMachineRetryException e) {
             log.error("状态机发生可重试异常 tid->{}", transactionId, e);
             String scanStatus = task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name();
-            Date nextRunTime = localDateTime2Date(LocalDateTime.now().plusMinutes(5));
-            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), scanStatus, nextRunTime, e);
+            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), scanStatus, e);
         } catch (Exception e) {
             log.error("状态机执行发生非重试异常 tid->{}", transactionId, e);
-            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), TaskStatus.close.name(), null, e);
+            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), TaskStatus.close.name(), e);
         } finally {
             log.info("释放锁 tid->{}", transactionId);
             unLock(transactionId);
         }
     }
 
-    private void updateTaskWhenException(Integer taskId, int retrytimes, String status, Date nextRunTime, Exception e) {
+    private void updateTaskWhenException(Integer taskId, int retrytimes, String status, Exception e) {
         //没有接受的话保存异常信息到StateMachineTask
         StateMachineTask update = new StateMachineTask();
         update.setId(taskId);
         update.setCurrentTrytimes(retrytimes + 1);
         update.setResponseData(JSON.toJSONString(e));
         update.setScanStatus(status);
-        if (nextRunTime != null) {
-            update.setNextRunTime(nextRunTime);
-        }
+        update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
         taskService.updateByPrimaryKeySelective(update);
     }
 
@@ -270,7 +262,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     /**
      * 根据Yml初始化状态机配置，并注入spring bean 容器
      */
-    private void registerStateMachineConfigBean(String stateMachineName) {
+    private synchronized void registerStateMachineConfigBean(String stateMachineName) {
         try {
             DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) context.getAutowireCapableBeanFactory();
             StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
@@ -287,9 +279,11 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 log.info("load StateMachineYmlConfig {}", name);
                 StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
                 if (beanFactory.containsBean(name)) {
-                    throw new StateMachineException("StateMachine bean name '" + name + "' has conflicts with existing");
+                    log.info("StateMachine bean name " + name + " has bean existing");
+                    return;
                 }
                 beanFactory.registerSingleton(name, stateMachineConfigurer);
+                configCache.put(stateMachineName, stateMachineConfigurer);
             }
         } catch (FileNotFoundException e) {
             log.info("find StateMachineYmlConfig Error", e);
