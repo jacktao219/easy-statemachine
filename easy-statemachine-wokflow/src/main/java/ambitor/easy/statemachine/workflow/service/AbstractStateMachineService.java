@@ -159,15 +159,14 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                     stateMachine.getState().getId(), stateMachine.getStateMachineError());
             if (!accept) {
                 throw stateMachine.getStateMachineError();
-            } else {
-                //如果不是结束状态，并且接受了，则重置currentTryTimes
-                update.setCurrentTrytimes(0);
-                //设置scanStatus
-                update.setScanStatus(stateMachine.getState().isSuspend() ? TaskStatus.suspend.name() : TaskStatus.open.name());
-                //如果是结束状态
-                if (stateMachine.getState().isEnd()) {
-                    update.setScanStatus(TaskStatus.close.name());
-                }
+            }
+            //如果不是结束状态，并且接受了，则重置currentTryTimes
+            update.setCurrentTrytimes(0);
+            //设置scanStatus
+            update.setScanStatus(stateMachine.getState().isSuspend() ? TaskStatus.suspend.name() : TaskStatus.open.name());
+            //如果是结束状态
+            if (stateMachine.getState().isEnd()) {
+                update.setScanStatus(TaskStatus.close.name());
             }
             update.setResponseData(JSON.toJSONString(headers));
             taskService.updateByPrimaryKeySelective(update);
