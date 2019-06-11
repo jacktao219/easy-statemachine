@@ -87,7 +87,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             }
         }
         //根据Yml初始化状态机配置，并注入spring bean 容器
-        registerStateMachineConfigBean(stateMachineName);
+        registerStateMachineConfigBean();
         return context.getBean(stateMachineName, StateMachineConfigurer.class);
     }
 
@@ -261,7 +261,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     /**
      * 根据Yml初始化状态机配置，并注入spring bean 容器
      */
-    private synchronized void registerStateMachineConfigBean(String stateMachineName) {
+    private synchronized void registerStateMachineConfigBean() {
         try {
             DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) context.getAutowireCapableBeanFactory();
             StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
@@ -282,7 +282,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                     return;
                 }
                 beanFactory.registerSingleton(name, stateMachineConfigurer);
-                configCache.put(stateMachineName, stateMachineConfigurer);
+                configCache.put(name, stateMachineConfigurer);
             }
         } catch (FileNotFoundException e) {
             log.info("find StateMachineYmlConfig Error", e);
