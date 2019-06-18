@@ -187,7 +187,6 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         //没有接受的话保存异常信息到StateMachineTask
         StateMachineTask update = new StateMachineTask();
         update.setId(taskId);
-        update.setCurrentTrytimes(retrytimes + 1);
         update.setResponseData(JSON.toJSONString(e));
         update.setScanStatus(status);
         update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
