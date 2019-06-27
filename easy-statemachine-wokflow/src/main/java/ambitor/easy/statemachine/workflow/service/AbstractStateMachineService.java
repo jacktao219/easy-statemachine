@@ -140,15 +140,21 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 log.info("状态机执行时获取锁失败 transactionId->{}", transactionId);
                 throw new StateMachineRetryException("状态机执行时获取锁失败");
             }
+            StateMachineTask exist = taskService.findByCode(task.getMachineCode());
+            if (!exist.getMachineState().equals(task.getMachineState())) {
+                log.info("重复执行，数据库状态已经更改，忽略此信息 transactionId:{}", task.getTransactionId());
+                return;
+            }
             StateMachineConfigurer<S, E> configurer = getByName(task.getMachineType());
             //生成一个状态机
             StateMachine<S, E> stateMachine = StateMachineFactory.build(configurer);
             //获取状态机泛型类型
             Class genericClass = getGenericSuperclass(configurer);
+            String machineState = task.getMachineState();
             if (genericClass.isEnum()) {
-                stateMachine.resetStateMachine((S) Enum.valueOf(genericClass, task.getMachineState()));
+                stateMachine.resetStateMachine((S) Enum.valueOf(genericClass, machineState));
             } else if (genericClass == String.class) {
-                stateMachine.resetStateMachine((S) task.getMachineState());
+                stateMachine.resetStateMachine((S) machineState);
             }
             MessageHeaders headers = new MessageHeaders();
             headers.addHeader(TASK_HEADER, task);
