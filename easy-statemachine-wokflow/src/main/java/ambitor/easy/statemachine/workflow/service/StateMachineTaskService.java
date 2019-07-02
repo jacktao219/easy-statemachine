@@ -25,6 +25,13 @@ public interface StateMachineTaskService {
     StateMachineTask findByCode(String code);
 
     /**
+     * 根据机器TransactionId查询
+     * @param transactionId 唯一编号
+     * @return 状态机
+     */
+    StateMachineTask findByTransactionId(String transactionId);
+
+    /**
      * 根据主键修改状态机任务
      * @param task 状态机
      * @return 影响行

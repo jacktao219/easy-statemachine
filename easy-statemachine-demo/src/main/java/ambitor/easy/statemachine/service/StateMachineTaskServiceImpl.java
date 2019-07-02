@@ -45,6 +45,16 @@ public class StateMachineTaskServiceImpl implements StateMachineTaskService {
     }
 
     /**
+     * 根据机器TransactionId查询
+     * @param transactionId 唯一编号
+     * @return 状态机
+     */
+    @Override
+    public StateMachineTask findByTransactionId(String transactionId) {
+        return new StateMachineTask();
+    }
+
+    /**
      * 获取需要执行的状态机任务
      * @return 状态机任务
      */
