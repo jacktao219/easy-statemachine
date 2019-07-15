@@ -1,5 +1,7 @@
 package ambitor.easy.statemachine.workflow.service;
 
+import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK_HEADER;
+
 import ambitor.easy.statemachine.core.StateMachine;
 import ambitor.easy.statemachine.core.annotation.EnableWithStateMachine;
 import ambitor.easy.statemachine.core.configurer.StateMachineConfigurer;
@@ -13,6 +15,19 @@ import ambitor.easy.statemachine.parser.yml.StateMachineYmlParser;
 import ambitor.easy.statemachine.workflow.model.StateMachineTask;
 import ambitor.easy.statemachine.workflow.model.TaskStatus;
 import com.alibaba.fastjson.JSON;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Type;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.TargetClassAware;
@@ -33,24 +48,9 @@ import org.springframework.util.StringUtils;
 import org.yaml.snakeyaml.Yaml;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Type;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK_HEADER;
-
 /**
  * 状态机service
+ *
  * @author Ambitor
  */
 @Slf4j
@@ -62,6 +62,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 通过状态机名称拿到状态机Configurer
+     *
      * @param stateMachineName 状态机名称
      * @return 配置
      */
@@ -79,7 +80,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         Collection<Object> values = stateMachineConfigs.values();
         if (!CollectionUtils.isEmpty(values)) {
             for (Object stateMachineConfig : values) {
-                StateMachineConfigurer adapter = (StateMachineConfigurer) stateMachineConfig;
+                StateMachineConfigurer adapter = (StateMachineConfigurer)stateMachineConfig;
                 if (stateMachineName.equals(adapter.getName())) {
                     configCache.put(stateMachineName, adapter);
                     return adapter;
@@ -87,16 +88,12 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             }
         }
         //根据Yml初始化状态机配置，并注入spring bean 容器
-        registerStateMachineConfigBean();
+        registerStateMachineConfigBean(stateMachineName);
         return context.getBean(stateMachineName, StateMachineConfigurer.class);
     }
 
     /**
-     * 通过定时调度启动任务
-     * 1、从数据库中将任务查询出来
-     * 2、标记任务为运行中
-     * 3、将任务放入到MQ中
-     * 注意事务处理，忽略超时重试的场景
+     * 通过定时调度启动任务 1、从数据库中将任务查询出来 2、标记任务为运行中 3、将任务放入到MQ中 注意事务处理，忽略超时重试的场景
      */
     @Override
     public List<StateMachineTask> execute() {
@@ -109,6 +106,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 更新状态后推送到mq
+     *
      * @param task 任务
      */
     @Transactional(rollbackFor = Exception.class)
@@ -127,6 +125,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 执行task
+     *
      * @param task task
      */
     @Override
@@ -152,24 +151,26 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             Class genericClass = getGenericSuperclass(configurer);
             String machineState = task.getMachineState();
             if (genericClass.isEnum()) {
-                stateMachine.resetStateMachine((S) Enum.valueOf(genericClass, machineState));
+                stateMachine.resetStateMachine((S)Enum.valueOf(genericClass, machineState));
             } else if (genericClass == String.class) {
-                stateMachine.resetStateMachine((S) machineState);
+                stateMachine.resetStateMachine((S)machineState);
             }
             MessageHeaders headers = new MessageHeaders();
             headers.addHeader(TASK_HEADER, task);
             boolean accept = stateMachine.start(headers);
             StateMachineTask update = new StateMachineTask();
+            update.setTransactionId(task.getTransactionId());
             update.setId(task.getId());
-            log.info("{}状态机执行结束,accept：{},当前状态{},异常{}", transactionId, accept,
-                    stateMachine.getState().getId(), stateMachine.getStateMachineError());
+            log.info("{}状态机执行结束,accept：{},当前状态{},异常{}", transactionId, accept, stateMachine.getState().getId(),
+                stateMachine.getStateMachineError());
             if (!accept) {
                 throw stateMachine.getStateMachineError();
             }
             //如果不是结束状态，并且接受了，则重置currentTryTimes
             update.setCurrentTrytimes(0);
             //设置scanStatus
-            update.setScanStatus(stateMachine.getState().isSuspend() ? TaskStatus.suspend.name() : TaskStatus.open.name());
+            update.setScanStatus(
+                stateMachine.getState().isSuspend() ? TaskStatus.suspend.name() : TaskStatus.open.name());
             //如果是结束状态
             if (stateMachine.getState().isEnd()) {
                 update.setScanStatus(TaskStatus.close.name());
@@ -179,19 +180,20 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         } catch (StateMachineRetryException e) {
             log.error("状态机发生可重试异常 tid->{}", transactionId, e);
             String scanStatus = task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name();
-            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), scanStatus, e);
+            updateTaskWhenException(task.getId(), task.getTransactionId(), scanStatus, e);
         } catch (Exception e) {
             log.error("状态机执行发生非重试异常 tid->{}", transactionId, e);
-            updateTaskWhenException(task.getId(), task.getCurrentTrytimes(), TaskStatus.close.name(), e);
+            updateTaskWhenException(task.getId(), task.getTransactionId(), TaskStatus.close.name(), e);
         } finally {
             log.info("释放锁 tid->{}", transactionId);
             unLock(transactionId);
         }
     }
 
-    private void updateTaskWhenException(Integer taskId, int retrytimes, String status, Exception e) {
+    private void updateTaskWhenException(Integer taskId, String transactionId, String status, Exception e) {
         //没有接受的话保存异常信息到StateMachineTask
         StateMachineTask update = new StateMachineTask();
+        update.setTransactionId(transactionId);
         update.setId(taskId);
         update.setResponseData(JSON.toJSONString(e));
         update.setScanStatus(status);
@@ -200,8 +202,8 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     }
 
     private static boolean isCglibProxy(@Nullable Object object) {
-        return (object instanceof SpringProxy &&
-                object.getClass().getName().contains(ClassUtils.CGLIB_CLASS_SEPARATOR));
+        return (object instanceof SpringProxy && object.getClass().getName()
+            .contains(ClassUtils.CGLIB_CLASS_SEPARATOR));
     }
 
     private static Class<?> getTargetClass(Object candidate) {
@@ -210,7 +212,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         }
         Class<?> result = null;
         if (candidate instanceof TargetClassAware) {
-            result = ((TargetClassAware) candidate).getTargetClass();
+            result = ((TargetClassAware)candidate).getTargetClass();
         }
         if (result == null) {
             result = (isCglibProxy(candidate) ? candidate.getClass().getSuperclass() : candidate.getClass());
@@ -221,6 +223,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 获取状态机状态的泛型Class对象
+     *
      * @param configurer 状态机
      * @return 状态机<S>状态的泛型Class
      */
@@ -235,26 +238,26 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             result = result.getSuperclass();
             genericSuperclass = result.getGenericSuperclass();
         }
-        ParameterizedTypeImpl type = (ParameterizedTypeImpl) genericSuperclass;
-        Class genericClass = (Class) type.getActualTypeArguments()[0];
+        ParameterizedTypeImpl type = (ParameterizedTypeImpl)genericSuperclass;
+        Class genericClass = (Class)type.getActualTypeArguments()[0];
         genericSuperclassCache.put(configurer, genericClass);
         return genericClass;
     }
 
-
     /**
      * 获取容器
+     *
      * @param applicationContext 上下文
      * @throws BeansException 异常
      */
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext)
-            throws BeansException {
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         context = applicationContext;
     }
 
     /**
      * 时间转换
+     *
      * @param localDateTime 时间
      */
     private static Date localDateTime2Date(LocalDateTime localDateTime) {
@@ -266,19 +269,24 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
     /**
      * 根据Yml初始化状态机配置，并注入spring bean 容器
      */
-    private synchronized void registerStateMachineConfigBean() {
+    private synchronized void registerStateMachineConfigBean(String stateMachineName) {
         try {
-            DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) context.getAutowireCapableBeanFactory();
-            StateMachineParser<StateMachineYmlConfig> stateMachineParser = beanFactory.getBean(StateMachineYmlParser.class);
+            DefaultListableBeanFactory beanFactory =
+                (DefaultListableBeanFactory)context.getAutowireCapableBeanFactory();
+            StateMachineParser<StateMachineYmlConfig> stateMachineParser =
+                beanFactory.getBean(StateMachineYmlParser.class);
             //实例化解析器
             Yaml yaml = new Yaml();
-            List<InputStream> inputStreams = getStateMachineFiles();
+            List<InputStream> inputStreams = getStateMachineFiles(stateMachineName);
             log.info("Find StateMachineYmlConfig yml " + inputStreams.size() + " count");
             for (InputStream inputStream : inputStreams) {
                 StateMachineYmlConfig config = yaml.loadAs(inputStream, StateMachineYmlConfig.class);
                 String name = config.getName();
                 if (name == null || name.length() <= 0) {
                     throw new StateMachineException("please defined name with .yml config");
+                }
+                if (!name.equals(stateMachineName)) {
+                    continue;
                 }
                 log.info("load StateMachineYmlConfig {}", name);
                 StateMachineConfigurer stateMachineConfigurer = stateMachineParser.parser(config);
@@ -296,7 +304,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         }
     }
 
-    protected List<InputStream> getStateMachineFiles() throws IOException {
+    protected List<InputStream> getStateMachineFiles(String stateMachineName) throws IOException {
         //配置文件地址
         Resource[] resources = getResources();
         List<InputStream> files = new ArrayList<>(5);
@@ -312,12 +320,14 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 放入MQ
+     *
      * @param task 任务
      */
     public abstract void sendToMq(StateMachineTask task);
 
     /**
      * 对machineTask加锁
+     *
      * @param transactionId 状态机的事务ID
      * @return true 成功 false 失败
      */
@@ -325,6 +335,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
 
     /**
      * 对machineTask解锁
+     *
      * @param transactionId 状态机的事务ID
      * @return true 成功 false 失败
      */
