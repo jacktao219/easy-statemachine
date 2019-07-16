@@ -9,3 +9,5 @@
 - easy-statemachine-wokflow 状态机工作流项目是基于easy-statemachine-core 实现的轻量级状态机工作流框架
 
 - easy-statemachine-demo 可运行Demo
+
+- easy-statemachine-common 分布式中的公共组件，如:通信，选举等(待开发)
