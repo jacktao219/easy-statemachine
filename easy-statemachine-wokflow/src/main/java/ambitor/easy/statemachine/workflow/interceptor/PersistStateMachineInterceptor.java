@@ -49,6 +49,7 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         //修改数据库
         StateMachineTask update = new StateMachineTask();
         update.setId(task.getId());
+        update.setTransactionId(task.getTransactionId());
         update.setMachineState(target.getId().toString());
         update.setRequestData(task.getRequestData());
         update.setResponseData(task.getResponseData());

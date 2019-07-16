@@ -22,6 +22,7 @@ public class StateMachineTask {
     private String requestData;
     private String responseData;
 
+    private Boolean lastRetry;
     public boolean isLastRetry() {
         return getCurrentTrytimes() >= getRetryTimes();
     }
