@@ -19,10 +19,10 @@ public class StateMachineTask {
     private Date nextRunTime;
     private Date createTime;
     private Date updateTime;
+    private String machineContext;
     private String requestData;
     private String responseData;
 
-    private Boolean lastRetry;
     public boolean isLastRetry() {
         return getCurrentTrytimes() >= getRetryTimes();
     }

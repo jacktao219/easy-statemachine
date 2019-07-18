@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.beans.BeansException;
@@ -195,7 +196,7 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         StateMachineTask update = new StateMachineTask();
         update.setTransactionId(transactionId);
         update.setId(taskId);
-        update.setResponseData(JSON.toJSONString(e));
+        update.setResponseData(ExceptionUtils.getStackTrace(e));
         update.setScanStatus(status);
         update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
         taskService.updateByPrimaryKeySelective(update);

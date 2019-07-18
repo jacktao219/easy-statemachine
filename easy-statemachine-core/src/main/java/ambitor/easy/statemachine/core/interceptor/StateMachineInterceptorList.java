@@ -76,9 +76,9 @@ public class StateMachineInterceptorList<S, E> implements StateMachineIntercepto
      * @param exception    the exception
      * @return the exception
      */
-    public void stateMachineError(StateMachine<S, E> stateMachine, Exception exception) {
+    public void stateMachineError(StateMachine<S, E> stateMachine, Message<E> eventMsg, Exception exception) {
         for (StateMachineInterceptor<S, E> interceptor : interceptors) {
-            if ((exception = interceptor.stateMachineError(stateMachine, exception)) == null) {
+            if ((exception = interceptor.stateMachineError(stateMachine,eventMsg, exception)) == null) {
                 break;
             }
         }

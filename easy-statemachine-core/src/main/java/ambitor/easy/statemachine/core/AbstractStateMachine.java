@@ -205,7 +205,7 @@ public class AbstractStateMachine<S, E> implements StateMachine<S, E> {
                             setStateMachineError(stateContext.getException());
                             log.info("状态扭转失败,source {} -> target {} Event {}", currentState.getId(), transition.getTarget().getId(), event.getPayload());
                             //状态机发生异常
-                            interceptors.stateMachineError(this, stateContext.getException());
+                            interceptors.stateMachineError(this,currentEvent, stateContext.getException());
                             return false;
                         }
                     }
@@ -227,7 +227,7 @@ public class AbstractStateMachine<S, E> implements StateMachine<S, E> {
             currentError = e;
             log.error("发送事件异常，未接受该事件" + event, e);
             if (interceptors != null) {
-                interceptors.stateMachineError(this, currentError);
+                interceptors.stateMachineError(this,currentEvent, currentError);
             }
             return false;
         }
