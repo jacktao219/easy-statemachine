@@ -71,7 +71,7 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         String errorMsg = ExceptionUtils.getStackTrace(e);
         String context = getContext(eventMsg);
         saveLog(task.getMachineCode(), transition.getEvent().toString(), stateMachine.getState().getId().toString(),
-            transition.getTarget().getId().toString(), Transition.FAILED, errorMsg, );
+            transition.getTarget().getId().toString(), Transition.FAILED, errorMsg, context);
         //修改数据库
         StateMachineTask update = new StateMachineTask();
         update.setTransactionId(task.getTransactionId());
