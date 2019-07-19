@@ -1,56 +1,75 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ambitor.framework</groupId>
-    <artifactId>easy-statemachine</artifactId>
-    <version>0.0.1</version>
-    <packaging>pom</packaging>
+  <groupId>com.ambitor.framework</groupId>
+  <artifactId>easy-statemachine</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
 
-    <name>easy-statemachine</name>
-    <url>http://maven.apache.org</url>
+  <name>easy-statemachine</name>
+  <url>http://maven.apache.org</url>
 
-    <modules>
-        <module>easy-statemachine-core</module>
-		<module>easy-statemachine-wokflow</module>
-        <module>easy-statemachine-demo</module>
-        <module>easy-statemachine-common</module>
-    </modules>
+  <modules>
+    <module>easy-statemachine-core</module>
+    <module>easy-statemachine-wokflow</module>
+    <module>easy-statemachine-demo</module>
+    <module>easy-statemachine-common</module>
+  </modules>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.20</version>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.0.1</version>
-                <configuration>
-                    <encoding>UTF-8</encoding>
-                    <charset>UTF-8</charset>
-                    <failOnError>false</failOnError>
-                    <includeDependencySources>false</includeDependencySources>
-                    <dependencySourceExcludes>
-                        <!-- exclude ONLY commons-cli artifacts -->
-                        <dependencySourceExclude>biz-hx-api:test.hxapi.*</dependencySourceExclude>
-                    </dependencySourceExcludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <phase>package</phase>
-                        <configuration>
-                            <additionalparam>-Xdoclint:none</additionalparam>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <spring.boot.version>1.5.7.RELEASE</spring.boot.version>
+    <fastjson.version>1.2.39</fastjson.version>
+    <lombok.version>1.16.16</lombok.version>
+    <snakeyaml.version>1.24</snakeyaml.version>
+    <deploy.url>http://maven.tengsaw.cn:9081/repository/xy-maven-public/</deploy.url>
+    <deploy.name>jn-maven-public-release</deploy.name>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.20</version>
+        <configuration>
+          <skipTests>true</skipTests>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.0.1</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <charset>UTF-8</charset>
+          <failOnError>false</failOnError>
+          <includeDependencySources>false</includeDependencySources>
+          <dependencySourceExcludes>
+            <!-- exclude ONLY commons-cli artifacts -->
+            <dependencySourceExclude>biz-hx-api:test.hxapi.*</dependencySourceExclude>
+          </dependencySourceExcludes>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <phase>package</phase>
+            <configuration>
+              <additionalparam>-Xdoclint:none</additionalparam>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <distributionManagement>
+    <repository>
+      <id>nexus-releases</id>
+      <name>${deploy.name}</name>
+      <url>${deploy.url}</url>
+    </repository>
+  </distributionManagement>
 </project>
