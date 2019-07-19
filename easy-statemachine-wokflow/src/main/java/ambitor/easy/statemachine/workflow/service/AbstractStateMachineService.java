@@ -157,6 +157,10 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
                 stateMachine.resetStateMachine((S)machineState);
             }
             MessageHeaders headers = new MessageHeaders();
+            String machineContext = task.getMachineContext();
+            if (!StringUtils.isEmpty(machineContext)) {
+                headers = JSON.parseObject(machineContext, MessageHeaders.class);
+            }
             headers.addHeader(TASK_HEADER, task);
             boolean accept = stateMachine.start(headers);
             StateMachineTask update = new StateMachineTask();

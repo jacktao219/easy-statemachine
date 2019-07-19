@@ -4,6 +4,7 @@ import static ambitor.easy.statemachine.workflow.model.StateMachineConstant.TASK
 
 import ambitor.easy.statemachine.core.StateMachine;
 import ambitor.easy.statemachine.core.context.Message;
+import ambitor.easy.statemachine.core.context.MessageHeaders;
 import ambitor.easy.statemachine.core.interceptor.AbstractStateMachineInterceptor;
 import ambitor.easy.statemachine.core.state.State;
 import ambitor.easy.statemachine.core.transition.Transition;
@@ -40,13 +41,13 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
     public void afterStateChange(State<S, E> target, Message<E> message, Transition<S, E> transition,
         StateMachine<S, E> stateMachine) {
         log.info("状态改变持久化到数据库");
-        StateMachineTask task =
-            (StateMachineTask)message.getHeaders().getHeaders().get(StateMachineConstant.TASK_HEADER);
+        MessageHeaders headers = message.getHeaders();
+        StateMachineTask task = (StateMachineTask)headers.getHeaders().get(StateMachineConstant.TASK_HEADER);
         String tid = task.getId() + "-" + System.currentTimeMillis();
         log.info("状态发生改变 tid->{}", tid);
-        message.getHeaders().addHeader(TRANSITION_UNIQUE_ID, tid);
+        headers.addHeader(TRANSITION_UNIQUE_ID, tid);
         //上下文
-        String context = getContext(message);
+        String context = getContext(headers);
         //保存转换日志
         String response = getResponse(task.getResponseData());
         saveLog(task.getMachineCode(), message.getPayload().toString(), transition.getSource().getId().toString(),
@@ -69,7 +70,7 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         StateMachineTask task =
             (StateMachineTask)stateMachine.getEvent().getHeaders().getHeaders().get(StateMachineConstant.TASK_HEADER);
         String errorMsg = ExceptionUtils.getStackTrace(e);
-        String context = getContext(eventMsg);
+        String context = getContext(eventMsg.getHeaders());
         saveLog(task.getMachineCode(), transition.getEvent().toString(), stateMachine.getState().getId().toString(),
             transition.getTarget().getId().toString(), Transition.FAILED, errorMsg, context);
         //修改数据库
@@ -98,9 +99,8 @@ public class PersistStateMachineInterceptor<S, E> extends AbstractStateMachineIn
         stateMachineLogService.insertSelective(record);
     }
 
-    private String getContext(Message<E> message) {
-        String context =
-            JSON.toJSONString(message.getHeaders(), (PropertyFilter)(o, key, value) -> !TASK_HEADER.equals(key));
+    private String getContext(MessageHeaders message) {
+        String context = JSON.toJSONString(message, (PropertyFilter)(o, key, value) -> !TASK_HEADER.equals(key));
         context = context.length() > MID_TEXT_LENGTH ? context.substring(0, MID_TEXT_LENGTH) : context;
         return context;
     }
