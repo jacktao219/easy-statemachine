@@ -185,21 +185,22 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
         } catch (StateMachineRetryException e) {
             log.error("状态机发生可重试异常 tid->{}", transactionId, e);
             String scanStatus = task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name();
-            updateTaskWhenException(task.getId(), task.getTransactionId(), scanStatus, e);
+            updateTaskWhenException(task, scanStatus, e);
         } catch (Exception e) {
             log.error("状态机执行发生非重试异常 tid->{}", transactionId, e);
-            updateTaskWhenException(task.getId(), task.getTransactionId(), TaskStatus.close.name(), e);
+            updateTaskWhenException(task, TaskStatus.close.name(), e);
         } finally {
             log.info("释放锁 tid->{}", transactionId);
             unLock(transactionId);
         }
     }
 
-    private void updateTaskWhenException(Integer taskId, String transactionId, String status, Exception e) {
+    private void updateTaskWhenException(StateMachineTask task,String status, Exception e) {
         //没有接受的话保存异常信息到StateMachineTask
         StateMachineTask update = new StateMachineTask();
-        update.setTransactionId(transactionId);
-        update.setId(taskId);
+        update.setTransactionId(task.getTransactionId());
+        update.setId(task.getId());
+        update.setCurrentTrytimes(task.getCurrentTrytimes());
         update.setResponseData(ExceptionUtils.getStackTrace(e));
         update.setScanStatus(status);
         update.setNextRunTime(localDateTime2Date(LocalDateTime.now().plusMinutes(5)));
