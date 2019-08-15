@@ -18,6 +18,10 @@ public enum TaskStatus {
      */
     close,
     /**
+     * 重试后最终执行失败
+     */
+    terminal,
+    /**
      * 添加此状态，用来让任务挂起不被扫描
      */
     suspend

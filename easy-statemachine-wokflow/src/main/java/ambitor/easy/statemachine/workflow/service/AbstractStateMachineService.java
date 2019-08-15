@@ -184,18 +184,19 @@ public abstract class AbstractStateMachineService implements ApplicationContextA
             taskService.updateByPrimaryKeySelective(update);
         } catch (StateMachineRetryException e) {
             log.error("状态机发生可重试异常 tid->{}", transactionId, e);
-            String scanStatus = task.isLastRetry() ? TaskStatus.close.name() : TaskStatus.error.name();
+            String scanStatus = task.isLastRetry() ? TaskStatus.terminal.name() : TaskStatus.error.name();
             updateTaskWhenException(task, scanStatus, e);
         } catch (Exception e) {
             log.error("状态机执行发生非重试异常 tid->{}", transactionId, e);
-            updateTaskWhenException(task, TaskStatus.close.name(), e);
+            String scanStatus = task.isLastRetry() ? TaskStatus.terminal.name() : TaskStatus.error.name();
+            updateTaskWhenException(task, scanStatus, e);
         } finally {
             log.info("释放锁 tid->{}", transactionId);
             unLock(transactionId);
         }
     }
 
-    private void updateTaskWhenException(StateMachineTask task,String status, Exception e) {
+    private void updateTaskWhenException(StateMachineTask task, String status, Exception e) {
         //没有接受的话保存异常信息到StateMachineTask
         StateMachineTask update = new StateMachineTask();
         update.setTransactionId(task.getTransactionId());
