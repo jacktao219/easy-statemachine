@@ -292,7 +292,7 @@ Interceptor（拦截器）：对当前状态改变前、后进行监听拦截。
 
 #### 工作流节点记录
 状态机主表记录工作流当前所在业务节点、重拾次数、结果等信息
-![主表](https://oscimg.oschina.net/oscnet/16e055c474710f874c052f50af33bf93921.jpg "主表")
+![](https://oscimg.oschina.net/oscnet/16e055c474710f874c052f50af33bf93921.jpg)
 
 工作流中的每个节点状态发生扭转后都会把上下文信息、结果记录到日志表
 ![扭转日志](https://oscimg.oschina.net/oscnet/2d651bc8c3a27a6017af97572f8d36cff01.jpg "扭转日志")
