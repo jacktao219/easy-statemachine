@@ -119,6 +119,107 @@ Interceptor（拦截器）：对当前状态改变前、后进行监听拦截。
 
 放款流程的配置如下：
 
+#### yml 配置方式
+```
+#状态机名称
+name: led
+
+#拦截器配置
+interceptor:
+    - PersistStateMachineInterceptor.class
+
+#状态配置
+states:
+  init: WAIT_CREATE_CARDII          #等待开二类户
+  suspend:
+  end:
+    - GRANT_FAILED                  #放款失败
+    - GRANT_SUCCESS                 #结束流程
+  other:
+    - WAIT_PRE_VALID                #放款前校验
+    - WAIT_PRE_VALID_CHECK          #放款前校验检查
+    - WAIT_SIGN_CONTRACT            #等待签署合同
+    - WAIT_GRANT                    #放款
+    - WAIT_GRANT_CHECK              #等待放款校验
+    - GRANT_FAILED_HANDLER          #放款失败处理
+    - GRANT_SUCCESS_HANDLER         #放款成功处理
+
+#事件配置
+events:
+    - CREATE_CARDII                 #开二类户
+    - GRANT_VALID                   #放款前落地校验
+    - GRANT_VALID_CHECK             #放款前落地校验Check
+    - SIGN_CONTRACT                 #签署合同
+    - GRANTED                       #放款
+    - GRANT_CHECKED                 #放款校验
+    - GRANTED_RESULT_HANDLE         #放款结果处理
+
+#转换器配置
+transitions:
+    - type: choice                            #类型： 选择转换器
+      source: WAIT_CREATE_CARDII              #源状态：等待创建二类户
+      event:  CREATE_CARDII                   #事件：  创建二类户
+      first: {status: GRANT_STATUS,equals: CREATE_CARDII_SUCCESS,target: WAIT_PRE_VALID}
+      last: {target: GRANT_FAILED_HANDLER}
+      action: BaseCreateCardIIAction.class    #转换操作：创建二类户业务实现类
+      errorAction: BaseCreateCardIIAction.errorAction
+
+    - type: choice                            #类型： 选择转换器
+      source: WAIT_PRE_VALID                  #源状态：等待放款前落地校验
+      event:  GRANT_VALID                     #事件：  放款前落地校验
+      first: {status: GRANT_STATUS,equals: GRANT_PRE_VALID_SUCCESS,target: WAIT_SIGN_CONTRACT}
+      last: {target: WAIT_PRE_VALID_CHECK}
+      action: BasePreValidAction.class        #转换操作：放款前落地校验
+      errorAction:
+
+    - type: choice                            #类型： 选择转换器
+      source: WAIT_PRE_VALID_CHECK            #源状态：等待放款前落地校验Check
+      event: GRANT_VALID_CHECK                #事件：  放款前落地校验Check
+      first: {status: GRANT_STATUS,equals: GRANT_PRE_VALID_SUCCESS,target: WAIT_SIGN_CONTRACT}
+      last: {target: GRANT_FAILED_HANDLER}
+      action: BasePreValidCheckAction.class   #转换操作：放款前落地校验
+      errorAction: BasePreValidCheckAction.errorAction
+
+    - type: choice                            #类型： 选择转换器
+      source: WAIT_SIGN_CONTRACT              #源状态：等待签署合同
+      event: SIGN_CONTRACT                    #事件：  签署合同
+      first: {status: GRANT_STATUS,equals: SIGN_CONTRACT_SUCCESS,target: WAIT_GRANT}
+      last: {target: GRANT_FAILED_HANDLER}
+      action: BaseContractAction.class        #转换操作：签合同Action
+      errorAction: BaseContractAction.errorAction
+
+    - type: choice                            #类型：选择转换器
+      source: WAIT_GRANT                      #源状态：等待放款
+      event:  GRANTED                         #事件：放款
+      action: BaseGrantAction.class           #转换操作：放款实现类
+      errorAction:
+      first: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_SUCCESS_HANDLER}
+      last: {target: WAIT_GRANT_CHECK}
+
+    - type: choice
+      source: WAIT_GRANT_CHECK                #源状态：等待放款校验
+      event:  GRANT_CHECKED                   #事件： 放款校验
+      errorAction: BaseGrantCheckAction.errorAction
+      first: {status: GRANT_STATUS,equals: GRANT_SUCCESS,target: GRANT_SUCCESS_HANDLER}
+      last: {target: GRANT_FAILED_HANDLER}
+
+
+
+    - type: standard                          #类型:    标准转换器
+      source: GRANT_SUCCESS_HANDLER           #源状态:  放款成功处理
+      target: GRANT_SUCCESS                   #目标状态:放款成功
+      event:  GRANTED_RESULT_HANDLE           #事件:    放款结果处理
+      action: BaseGrantSuccessAction.class #转换操作: 众安放款成功业务实现类
+
+    - type: standard                          #类型:    标准转换器
+      source: GRANT_FAILED_HANDLER            #源状态:  放款失败处理
+      target: GRANT_FAILED                    #目标状态:放款失败
+      event:  GRANTED_RESULT_HANDLE           #事件:    放款结果处理
+      action: BaseGrantFailedAction.class
+
+```
+
+####代码配置
 ```
     /**
      * 定义状态枚举
